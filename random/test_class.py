@@ -202,3 +202,43 @@ def statiModes(lam_batch, tol=1e-5):
     # print(active_mode_frequence, total_n_mode)
 
     return active_mode_frequence, unique_mode_list, mode_frequency_list
+
+
+# compute the boundaries for each mode
+# F \lambda +D x+lcp_offset
+# output a polytope for such specified mode: Ax+b>=0
+def mode_polytope(F, D, lcp_offset, mode_vector):
+    # detect the active mode index
+    tol = 1e-6
+    active_index = []
+    inactive_index = []
+    for i in range(mode_vector.size):
+        if mode_vector[i] < tol:
+            inactive_index += [i]
+        else:
+            active_index += [i]
+
+    # partition the matrix of F and matrix D into active parts and inactive parts
+    F11 = F[active_index][:, active_index]
+    F12 = F[active_index][:, inactive_index]
+    F21 = F[inactive_index][:, active_index]
+    F22 = F[inactive_index][:, inactive_index]
+    D1 = D[active_index]
+    D2 = D[inactive_index]
+    lcp_offset_1 = lcp_offset[active_index]
+    lcp_offset_2 = lcp_offset[inactive_index]
+
+    # output
+    A = D2 - F21 @ la.inv(F11) @ D1
+    b = lcp_offset_2 - F21 @ la.inv(F11) @ lcp_offset_1
+
+    return A, b
+
+
+# do the plot of differnet mode
+def plotModes(lam_batch, tol=1e-5):
+    # do the statistics for the modes
+    lam_batch_mode = np.where(lam_batch < tol, 0, 1)
+    unique_mode_list, mode_indices = np.unique(lam_batch_mode, axis=0, return_inverse=True)
+
+    return unique_mode_list, mode_indices
