@@ -111,6 +111,7 @@ for k in range(5000):
 
 
 
+
         # this is for plot
         sc.set_offsets(np.c_[pred_x, pred_y])
         sc.set_array(color_list3[pred_mode_indices])
@@ -129,6 +130,7 @@ for k in range(5000):
             '| dyn_loss:', dyn_loss,
             '| lcp_loss:', lcp_loss,
             '| relative_error:', relative_error,
+            '| mode_number:', len(mode_list),
         )
 
 # print(theta_trace[-1])
