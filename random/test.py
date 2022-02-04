@@ -25,7 +25,7 @@ lcp_offset = lcs_mats['lcp_offset']
 
 
 # ====================================================================================================
-# make sure this is consistent with  line 29-30 in  train_full.py
+# make sure this is consistent with  line 29-30 in  train.py
 # generate the training data
 data_generator = test_class.LCS_learner(n_state, n_lam, A, C, D, G, lcp_offset, stiffness=0)
 # ====================================================================================================

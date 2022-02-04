@@ -65,7 +65,7 @@ loss_trace = []
 theta_trace = []
 # optimizer
 optimizier = opt.Adam()
-optimizier.learning_rate = 1e-2
+optimizier.learning_rate = 1e-1
 for k in range(2000):
     # mini batch dataset
     shuffle_index = np.random.permutation(train_data_size)[0:mini_batch_size]
