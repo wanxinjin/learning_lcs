@@ -1,2 +1,2 @@
 # learning_lcs
-private repo for debugging
+repo for debugging
