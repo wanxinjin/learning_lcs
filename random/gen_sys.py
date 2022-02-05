@@ -2,7 +2,7 @@ import test_class
 import numpy as np
 
 # generate the data
-n_state = 2
+n_state = 3
 n_lam = 3
 # np.random.seed(1)
 A = np.random.randn(n_state, n_state)

@@ -31,7 +31,8 @@ train_data_size = 1000
 train_x_batch = 1 * np.random.uniform(-1, 1, size=(train_data_size, n_state))
 train_x_next_batch, train_lam_opt_batch = data_generator.dyn_prediction(train_x_batch, theta_val=[])
 mode_percentage, unique_mode_list, mode_frequency_list = test_class.statiModes(train_lam_opt_batch)
-
+print('number of modes:', mode_frequency_list.size)
+print('training data mode frequency: ', mode_frequency_list)
 # check the mode index
 mode_list, train_mode_indices = test_class.plotModes(train_lam_opt_batch)
 

@@ -67,6 +67,7 @@ class LCS_learner:
         dist = self.D @ self.x + self.F @ self.lam + self.lcp_offset
         self.phi = SX.sym('phi', self.n_lam)
         lcp_loss = dot(self.lam, self.phi) + 1 / gamma * dot(self.phi - dist, self.phi - dist)
+        self.dist_fn = Function('dist_fn', [self.x, self.lam, self.theta], [dist])
 
         # total loss
         loss = dyn_loss + lcp_loss / epsilon
