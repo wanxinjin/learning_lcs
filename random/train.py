@@ -5,6 +5,7 @@ from casadi import *
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
+
 def print(*args):
     __builtins__.print(*("%.5f" % a if isinstance(a, float) else a
                          for a in args))
@@ -38,21 +39,21 @@ mode_list, train_mode_indices = test_class.plotModes(train_lam_opt_batch)
 
 # =============== plot the training data, each color for each mode  ======================================
 # plot dimension index
-x_indx = 0
-y_indx = 0
+plot_x_indx = 0
+plot_y_indx = 0
 
 plt.figure()
 plt.title('True modes marked in (o)')
-train_x = train_x_batch[:, x_indx]
-train_y = train_x_next_batch[:, y_indx]
+train_x = train_x_batch[:, plot_x_indx]
+train_y = train_x_next_batch[:, plot_y_indx]
 plt.scatter(train_x, train_y, c=color_list[train_mode_indices], s=30)
 
 # initialize the plot of the learned learned results
 plt.ion()
 fig, ax = plt.subplots()
 ax.set_title('Learned modes marked in (+)')
-train_x = train_x_batch[:, x_indx]
-train_y = train_x_next_batch[:, y_indx]
+train_x = train_x_batch[:, plot_x_indx]
+train_y = train_x_next_batch[:, plot_y_indx]
 plt.scatter(train_x, train_y, c=color_list[train_mode_indices], s=80, alpha=0.3)
 pred_x, pred_y = [], []
 sc = ax.scatter(pred_x, pred_y, s=30, marker="+", cmap='paried')
@@ -103,8 +104,8 @@ for k in range(5000):
         pred_mode_list, pred_mode_indices = test_class.plotModes(pred_lam_batch)
 
         # plot the learned mode
-        pred_x = train_x_batch[:, x_indx]
-        pred_y = train_x_next_batch[:, y_indx]
+        pred_x = train_x_batch[:, plot_x_indx]
+        pred_y = train_x_next_batch[:, plot_y_indx]
         sc.set_offsets(np.c_[pred_x, pred_y])
         sc.set_array(color_list[pred_mode_indices])
         fig.canvas.draw_idle()
@@ -120,9 +121,26 @@ for k in range(5000):
             '| pred_mode_counts:', len(pred_mode_list),
         )
 
-
 # save
+
+# on the prediction using the current learned lcs
+pred_x_next_batch, pred_lam_batch = learner.dyn_prediction(train_x_batch, curr_theta)
+# compute the prediction error
+error_x_next_batch = pred_x_next_batch - train_x_next_batch
+relative_error = (la.norm(error_x_next_batch, axis=1) / la.norm(train_x_next_batch, axis=1)).mean()
+# compute the predicted mode statistics
+pred_mode_list, pred_mode_indices = test_class.plotModes(pred_lam_batch)
+
 np.save('learned', {
     'theta_trace': theta_trace,
     'loss_trace': loss_trace,
+    'color_list': color_list,
+    'train_x': train_x,
+    'train_y': train_y,
+    'train_mode_indices': train_mode_indices,
+    'pred_y': pred_y,
+    'pred_mode_indices': pred_mode_indices,
+    'relative_error': relative_error,
+    'plot_x_index': plot_x_indx,
+    'plot_y_index': plot_x_indx,
 })

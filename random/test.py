@@ -25,6 +25,28 @@ G = lcs_mats['G']
 F = lcs_mats['F']
 lcp_offset = lcs_mats['lcp_offset']
 
+
+# ==============================# re-show the training plot   ==================================
+learned_res = np.load('learned.npy', allow_pickle=True).item()
+learned_theta = learned_res['theta_trace'][-1]
+train_x = learned_res['train_x']
+train_y = learned_res['train_y']
+train_mode_indices = learned_res['train_mode_indices']
+learned_y = learned_res['pred_y']
+learned_mode_indices = learned_res['pred_mode_indices']
+
+
+# plot the true one
+fig1, ax = plt.subplots()
+ax.set_title('Learned modes marked in (^), \n True modes marked in (o)')
+plt.scatter(train_x, train_y, c=color_list[train_mode_indices], s=80, alpha=0.3)
+# plot the predicted one
+ax.scatter(train_x, learned_y, c=color_list[learned_mode_indices], s=40, marker="^")
+plt.show()
+
+
+
+
 # ==============================   generate the training data    ========================================
 # ！！！！！！！！！！！！！！！！make sure matching with line 27-33 in the train.py
 data_generator = test_class.LCS_learner(n_state, n_lam, A, C, D, G, lcp_offset, stiffness=0)
@@ -39,24 +61,23 @@ test_mode_list, test_mode_indices = test_class.plotModes(test_lam_opt_batch)
 # ！！！！！！！！！！！！！！！！ make sure matching with line 60-63 in the train.py
 learner = test_class.LCS_learner(n_state, n_lam=n_lam, stiffness=10)
 # load learning results
-learned_res = np.load('learned.npy', allow_pickle=True).item()
-learned_theta = learned_res['theta_trace'][-1]
 pred_x_next_batch, pred_lam_opt_batch = learner.dyn_prediction(test_x_batch, learned_theta)
 pred_mode_list, pred_mode_indices = test_class.plotModes(test_lam_opt_batch)
 
 # =============== plot the training data, each color for each mode  ======================================
-x_indx = 0
-y_indx = 0
+plot_x_indx = 0
+plot_y_indx = 0
+
 # plot the true one
-fig, ax = plt.subplots()
-ax.set_title('Learned modes marked in (+), \n True modes marked in (o)')
-test_x = test_x_batch[:, x_indx]
-test_y = test_x_next_batch[:, y_indx]
+fig2, ax = plt.subplots()
+ax.set_title('Learned modes marked in (^), \n True modes marked in (o)')
+test_x = test_x_batch[:, plot_x_indx]
+test_y = test_x_next_batch[:, plot_y_indx]
 plt.scatter(test_x, test_y, c=color_list[test_mode_indices], s=80, alpha=0.3)
 # plot the predicted one
-pred_y = pred_x_next_batch[:, y_indx]
-ax.scatter(test_x, pred_y, c=color_list[pred_mode_indices], s=30, marker="+")
-# plt.show()
+pred_y = pred_x_next_batch[:, plot_y_indx]
+ax.scatter(test_x, pred_y, c=color_list[pred_mode_indices], s=40, marker="^")
+plt.show()
 
 # ==================== print some key results  =======================
 
@@ -112,8 +133,10 @@ print('test_lam')
 print(test_lam_opt_batch[0:10])
 
 # print('------------------------------------------------')
-# print('compute the distance')
-# pred_dist = learner.dist_fn(test_x_batch.T, pred_lam_opt_batch.T, learned_theta).full().T
-# print(pred_dist[0:10])
-# print('prod  the distance with lam')
-# print(pred_dist[0:10]*pred_lam_opt_batch[0:10])
+print('compute the distance')
+pred_dist, pred_lcp_loss = learner.lcp_fn(test_x_batch.T, pred_lam_opt_batch.T, learned_theta)
+pred_dist = pred_dist.full().T
+pred_lcp_loss = pred_lcp_loss.full().T
+print(pred_dist[0:10])
+print('prod  the distance with lam')
+print(pred_dist[0:10] * pred_lam_opt_batch[0:10])
