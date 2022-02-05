@@ -214,10 +214,8 @@ def statiModes(lam_batch, tol=1e-5):
     unique_mode_list, mode_count_list = np.unique(lam_batch_mode, axis=0, return_counts=True)
     mode_frequency_list = mode_count_list / lam_batch.shape[0]
 
-    active_mode_frequence = unique_mode_list.shape[0] / total_n_mode
-    # print(active_mode_frequence, total_n_mode)
 
-    return active_mode_frequence, unique_mode_list, mode_frequency_list
+    return unique_mode_list, mode_frequency_list
 
 
 # compute the boundaries for each mode

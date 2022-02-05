@@ -31,11 +31,11 @@ data_generator = test_class.LCS_learner(n_state, n_lam, A, C, D, G, lcp_offset, 
 train_data_size = 1000
 train_x_batch = 1 * np.random.uniform(-1, 1, size=(train_data_size, n_state))
 train_x_next_batch, train_lam_opt_batch = data_generator.dyn_prediction(train_x_batch, theta_val=[])
-mode_percentage, unique_mode_list, mode_frequency_list = test_class.statiModes(train_lam_opt_batch)
-print('number of modes:', mode_frequency_list.size)
-print('training data mode frequency: ', mode_frequency_list)
+train_mode_list, train_mode_frequency_list = test_class.statiModes(train_lam_opt_batch)
+print('number of modes in the training data:', train_mode_frequency_list.size)
+print('mode frequency in the training data: ', train_mode_frequency_list)
 # check the mode index
-mode_list, train_mode_indices = test_class.plotModes(train_lam_opt_batch)
+train_mode_list, train_mode_indices = test_class.plotModes(train_lam_opt_batch)
 
 # =============== plot the training data, each color for each mode  ======================================
 # plot dimension index
@@ -63,7 +63,7 @@ plt.draw()
 learner = test_class.LCS_learner(n_state, n_lam=n_lam, stiffness=10)
 true_theta = vertcat(vec(G), vec(D), lcp_offset, vec(A), vec(C)).full().flatten()
 
-# ====================================================================================================
+# ================================   beginning the training process    ======================================
 # doing learning process
 curr_theta = 0.1 * np.random.randn(learner.n_theta)
 # curr_theta = true_theta + 2 * np.random.randn(learner.n_theta)
@@ -123,16 +123,31 @@ for k in range(5000):
 
 # save
 
+
+# ================================   do some anlaysis for the learned    ======================================
 # on the prediction using the current learned lcs
 pred_x_next_batch, pred_lam_batch = learner.dyn_prediction(train_x_batch, curr_theta)
-# compute the prediction error
+# compute the overall relative prediction error
 error_x_next_batch = pred_x_next_batch - train_x_next_batch
 relative_error = (la.norm(error_x_next_batch, axis=1) / la.norm(train_x_next_batch, axis=1)).mean()
 # compute the predicted mode statistics
-pred_mode_list, pred_mode_indices = test_class.plotModes(pred_lam_batch)
+pred_mode_list0, pred_mode_frequency_list = test_class.statiModes(pred_lam_batch)
+pred_mode_list1, pred_mode_indices = test_class.plotModes(pred_lam_batch)
+pred_error_per_mode_list = []
+for i in range(len(pred_mode_list0)):
+    mode_i_index = np.where(pred_mode_indices == i)
+    mode_i_error = error_x_next_batch[mode_i_index]
+    mode_i_relative_error = (la.norm(mode_i_error, axis=1) / la.norm(train_x_next_batch[mode_i_index], axis=1)).mean()
+    pred_error_per_mode_list += [mode_i_relative_error]
+
+print(pred_mode_list0)
+print(pred_mode_list1)
+print(pred_mode_frequency_list)
+print(pred_error_per_mode_list)
+
+# take out the plot dimension
 pred_x = train_x_batch[:, plot_x_indx]
 pred_y = pred_x_next_batch[:, plot_y_indx]
-
 
 np.save('learned', {
     'theta_trace': theta_trace,
@@ -141,8 +156,15 @@ np.save('learned', {
     'train_x': train_x,
     'train_y': train_y,
     'train_mode_indices': train_mode_indices,
+    'train_mode_list': train_mode_list,
+    'train_mode_count': train_mode_frequency_list.size,
+    'train_mode_frequency': train_mode_frequency_list,
     'pred_y': pred_y,
     'pred_mode_indices': pred_mode_indices,
+    'pred_mode_list': pred_mode_list1,
+    'pred_mode_frequency': pred_mode_frequency_list,
+    'pred_error_per_mode_list': pred_error_per_mode_list,
+    'pred_mode_count': len(pred_mode_list1),
     'relative_error': relative_error,
     'plot_x_index': plot_x_indx,
     'plot_y_index': plot_x_indx,
