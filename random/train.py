@@ -105,7 +105,7 @@ for k in range(5000):
 
         # plot the learned mode
         pred_x = train_x_batch[:, plot_x_indx]
-        pred_y = train_x_next_batch[:, plot_y_indx]
+        pred_y = pred_x_next_batch[:, plot_y_indx]
         sc.set_offsets(np.c_[pred_x, pred_y])
         sc.set_array(color_list[pred_mode_indices])
         fig.canvas.draw_idle()
@@ -130,6 +130,9 @@ error_x_next_batch = pred_x_next_batch - train_x_next_batch
 relative_error = (la.norm(error_x_next_batch, axis=1) / la.norm(train_x_next_batch, axis=1)).mean()
 # compute the predicted mode statistics
 pred_mode_list, pred_mode_indices = test_class.plotModes(pred_lam_batch)
+pred_x = train_x_batch[:, plot_x_indx]
+pred_y = pred_x_next_batch[:, plot_y_indx]
+
 
 np.save('learned', {
     'theta_trace': theta_trace,
