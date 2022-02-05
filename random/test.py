@@ -88,7 +88,7 @@ for i in range(len(pred_mode_list0)):
     mode_i_relative_error = (la.norm(mode_i_error, axis=1) / la.norm(test_x_next_batch[mode_i_index], axis=1)).mean()
     pred_error_per_mode_list += [mode_i_relative_error]
 
-print('####################training results analysis#########################')
+print('#################### testing results analysis#########################')
 print('mode count for testing data:', test_mode_frequency_list.size)
 print('mode list for testing data:\n', test_mode_list)
 print('mode frequency for testing data:\n', test_mode_frequency_list)
