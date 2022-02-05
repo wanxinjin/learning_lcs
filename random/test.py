@@ -1,6 +1,9 @@
 import test_class
+import lcs.optim as opt
 import numpy.linalg as la
 from casadi import *
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 
 
 def print(*args):
@@ -8,12 +11,12 @@ def print(*args):
                          for a in args))
 
 
-# load the system
-lcs_mats = np.load('random_lcs.npy', allow_pickle=True).item()
-min_sig = lcs_mats['min_sig']
-print(min_sig)
+# color list
+color_list = np.linspace(0, 1, 10)
 
-# generating the testing data and training data
+
+# ==============================   load the generated LCS system   ==================================
+lcs_mats = np.load('random_lcs.npy', allow_pickle=True).item()
 n_state = lcs_mats['n_state']
 n_lam = lcs_mats['n_lam']
 A = lcs_mats['A']
@@ -24,56 +27,77 @@ F = lcs_mats['F']
 lcp_offset = lcs_mats['lcp_offset']
 
 
-# ====================================================================================================
-# make sure this is consistent with  line 29-30 in  train.py
-# generate the training data
+# ==============================   generate the training data    ========================================
+# ！！！！！！！！！！！！！！！！make sure matching with line 27-33 in the train.py
 data_generator = test_class.LCS_learner(n_state, n_lam, A, C, D, G, lcp_offset, stiffness=0)
-# ====================================================================================================
-
-# generate the training data
-test_data_size = 5000
+# generate the testing data
+test_data_size = 1000
 test_x_batch = 1 * np.random.uniform(-1, 1, size=(test_data_size, n_state))
 test_x_next_batch, test_lam_opt_batch = data_generator.dyn_prediction(test_x_batch, theta_val=[])
-
-# load the learned results
-learned = np.load('learned.npy', allow_pickle=True).item()
-learned_theta = learned['theta_trace'][-1]
+# check the mode index
+test_mode_list, test_mode_indices = test_class.plotModes(test_lam_opt_batch)
 
 
-# ====================================================================================================
-learner = test_class.LCS_learner(n_state, n_lam=n_lam, stiffness=1)
-# ====================================================================================================
-
+# ==============================   create the learner object    ========================================
+# ！！！！！！！！！！！！！！！！ make sure matching with line 60-63 in the train.py
+learner = test_class.LCS_learner(n_state, n_lam=n_lam, stiffness=10)
+# load learning results
+learned_res=np.load('learned.npy', allow_pickle=True).item()
+learned_theta=learned_res['theta_trace'][-1]
 pred_x_next_batch, pred_lam_opt_batch = learner.dyn_prediction(test_x_batch, learned_theta)
+pred_mode_list, pred_mode_indices = test_class.plotModes(test_lam_opt_batch)
 
+# =============== plot the training data, each color for each mode  ======================================
+x_indx = 0
+y_indx = 0
+# plot the true one
+fig, ax = plt.subplots()
+ax.set_title('Learned modes marked in (+), \n True modes marked in (o)')
+test_x = test_x_batch[:, x_indx]
+test_y = test_x_next_batch[:, y_indx]
+plt.scatter(test_x, test_y, c=color_list[test_mode_indices], s=80, alpha=0.3)
+# plot the predicted one
+pred_y=pred_x_next_batch[:, y_indx]
+ax.scatter(test_x, pred_y, c=color_list[pred_mode_indices], s=30, marker="+")
+plt.show()
 
-print('------------------------------------------------')
-print('A')
-print(A)
-print(learner.A_fn(learned_theta))
-print(A/learner.A_fn(learned_theta))
-print('------------------------------------------------')
-print('C')
-print(C)
-print(learner.C_fn(learned_theta))
-print('------------------------------------------------')
-print('D')
-print(D)
-print(learner.D_fn(learned_theta))
-print('------------------------------------------------')
-print('G')
-print(G)
-print(learner.G_fn(learned_theta))
-print('------------------------------------------------')
-print('lcp_offset')
-print(lcp_offset)
-print(learner.lcp_offset_fn(learned_theta))
-
+# ==================== print some key results  =======================
 
 print('------------------------------------------------')
 error_x_next_batch = pred_x_next_batch - test_x_next_batch
 relative_error = (la.norm(error_x_next_batch, axis=1) / la.norm(test_x_next_batch, axis=1)).mean()
-print('relative_error:', relative_error)
+print('relative prediction error:', relative_error)
+
+
+print('------------------------------------------------')
+print('A')
+print('true')
+print(A)
+print('learned')
+print(learner.A_fn(learned_theta))
+print('------------------------------------------------')
+print('C')
+print('true')
+print(C)
+print('learned')
+print(learner.C_fn(learned_theta))
+print('------------------------------------------------')
+print('D')
+print('true')
+print(D)
+print(learner.D_fn(learned_theta))
+print('------------------------------------------------')
+print('G')
+print('true')
+print(G)
+print('learned')
+print(learner.G_fn(learned_theta))
+print('------------------------------------------------')
+print('lcp_offset')
+print(lcp_offset)
+print('learned')
+print(learner.lcp_offset_fn(learned_theta))
+
 print('------------------------------------------------')
 print('pred_x/true_x')
 print(pred_x_next_batch[0:10]/test_x_next_batch[0:10])
@@ -92,9 +116,3 @@ print('pred_lam')
 print(pred_lam_opt_batch[0:10])
 print('test_lam')
 print(test_lam_opt_batch[0:10])
-
-
-
-
-
-
