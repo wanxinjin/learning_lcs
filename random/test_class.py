@@ -64,10 +64,9 @@ class LCS_learner:
         dyn_loss = dot(dyn - self.x_next, dyn - self.x_next)
 
         # lcp loss
-        dist = self.D @ self.x + self.F @ self.lam + self.lcp_offset
+        self.dist = self.D @ self.x + self.F @ self.lam + self.lcp_offset
         self.phi = SX.sym('phi', self.n_lam)
-        lcp_loss = dot(self.lam, self.phi) + 1 / gamma * dot(self.phi - dist, self.phi - dist)
-        self.lcp_fn = Function('dist_fn', [self.x, self.lam, self.theta], [dist, dot(self.lam, dist)])
+        lcp_loss = dot(self.lam, self.phi) + 1 / gamma * dot(self.phi - self.dist, self.phi - self.dist)
 
         # total loss
         loss = dyn_loss + lcp_loss / epsilon
@@ -166,12 +165,12 @@ class LCS_learner:
         x_theta_batch = np.hstack((x_batch, theta_val_batch))
 
         # establish the lcp solver
-        dist = self.D @ self.x + self.F @ self.lam
-        lcp_loss = dot(dist, self.lam)
+        lcp_loss = dot(self.dist, self.lam)
         x_theta = vertcat(self.x, self.theta)
-        quadprog = {'x': self.lam, 'f': lcp_loss, 'g': dist, 'p': x_theta}
+        quadprog = {'x': self.lam, 'f': lcp_loss, 'g': self.dist, 'p': x_theta}
         opts = {'printLevel': 'none'}
         lcp_Solver = qpsol('lcp_solver', 'qpoases', quadprog, opts)
+        self.lcp_fn = Function('dist_fn', [self.x, self.lam, self.theta], [self.dist, dot(self.dist, self.lam)])
 
         # establish the dynamics equation
         dyn = self.A @ self.x + self.C @ self.lam
@@ -181,14 +180,21 @@ class LCS_learner:
         sol_batch = lcp_Solver(lbx=0., lbg=0., p=x_theta_batch.T)
         lam_opt_batch = sol_batch['x'].full().T
 
-        np.set_printoptions(suppress=True)
-        dist_opt_batch, lcp_loss_opt_batch = self.lcp_fn(x_batch.T, lam_opt_batch.T, theta_val_batch.T)
-        dist_opt_batch = dist_opt_batch.full().T
-        lcp_loss_opt_batch = lcp_loss_opt_batch.full().T
-        print(dist_opt_batch)
-        print(dist_opt_batch * lam_opt_batch)
-        print(lcp_loss_opt_batch - sol_batch['f'].full().T)
-        input()
+        # debug
+        # np.set_printoptions(suppress=True)
+        # dist_opt_batch, lcp_loss_opt_batch = self.lcp_fn(x_batch.T, lam_opt_batch.T, theta_val_batch.T)
+        # dist_opt_batch = dist_opt_batch.full().T
+        # lcp_loss_opt_batch = lcp_loss_opt_batch.full().T
+        # print('dist_opt')
+        # print(dist_opt_batch)
+        # print('dist_opt*lam_opt')
+        # print(dist_opt_batch * lam_opt_batch)
+        # print('lcp_loss_opt')
+        # print(np.amax(sol_batch['f'].full().T))
+        # print('lcp_loss_computed')
+        # print(np.amax(lcp_loss_opt_batch))
+        # print(np.amin(lcp_loss_opt_batch))
+        # input()
 
         # compute the next state batch
         x_next_batch = dyn_fn(x_batch.T, lam_opt_batch.T, theta_val_batch.T).full().T
