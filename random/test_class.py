@@ -67,7 +67,7 @@ class LCS_learner:
         dist = self.D @ self.x + self.F @ self.lam + self.lcp_offset
         self.phi = SX.sym('phi', self.n_lam)
         lcp_loss = dot(self.lam, self.phi) + 1 / gamma * dot(self.phi - dist, self.phi - dist)
-        self.dist_fn = Function('dist_fn', [self.x, self.lam, self.theta], [dist])
+        self.lcp_fn = Function('dist_fn', [self.x, self.lam, self.theta], [dist, dot(self.lam, dist)])
 
         # total loss
         loss = dyn_loss + lcp_loss / epsilon
@@ -180,6 +180,15 @@ class LCS_learner:
         # compute the lam_batch
         sol_batch = lcp_Solver(lbx=0., lbg=0., p=x_theta_batch.T)
         lam_opt_batch = sol_batch['x'].full().T
+
+        np.set_printoptions(suppress=True)
+        dist_opt_batch, lcp_loss_opt_batch = self.lcp_fn(x_batch.T, lam_opt_batch.T, theta_val_batch.T)
+        dist_opt_batch = dist_opt_batch.full().T
+        lcp_loss_opt_batch = lcp_loss_opt_batch.full().T
+        print(dist_opt_batch)
+        print(dist_opt_batch * lam_opt_batch)
+        print(lcp_loss_opt_batch - sol_batch['f'].full().T)
+        input()
 
         # compute the next state batch
         x_next_batch = dyn_fn(x_batch.T, lam_opt_batch.T, theta_val_batch.T).full().T

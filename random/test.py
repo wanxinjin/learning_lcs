@@ -111,9 +111,9 @@ print(pred_lam_opt_batch[0:10])
 print('test_lam')
 print(test_lam_opt_batch[0:10])
 
-print('------------------------------------------------')
-print('compute the distance')
-pred_dist = learner.dist_fn(test_x_batch.T, pred_lam_opt_batch.T, learned_theta).full().T
-print(pred_dist[0:10])
-print('prod  the distance with lam')
-print(pred_dist[0:10]*pred_lam_opt_batch[0:10])
+# print('------------------------------------------------')
+# print('compute the distance')
+# pred_dist = learner.dist_fn(test_x_batch.T, pred_lam_opt_batch.T, learned_theta).full().T
+# print(pred_dist[0:10])
+# print('prod  the distance with lam')
+# print(pred_dist[0:10]*pred_lam_opt_batch[0:10])
