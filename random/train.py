@@ -51,12 +51,20 @@ plt.scatter(train_x, train_y, c=color_list[train_mode_indices], s=30)
 # initialize the plot of the learned learned results
 plt.ion()
 fig, ax = plt.subplots()
-ax.set_title('Learned modes marked in (+)')
+ax.set_title('Learned modes marked in (+) \n True modes marked in (o)')
 train_x = train_x_batch[:, plot_x_indx]
 train_y = train_x_next_batch[:, plot_y_indx]
 plt.scatter(train_x, train_y, c=color_list[train_mode_indices], s=80, alpha=0.3)
 pred_x, pred_y = [], []
 sc = ax.scatter(pred_x, pred_y, s=30, marker="+", cmap='paried')
+
+fig2, ax = plt.subplots()
+ax.set_title('Learned modes marked in (+)')
+train_x = train_x_batch[:, plot_x_indx]
+train_y = train_x_next_batch[:, plot_y_indx]
+plt.scatter(train_x, train_y, c=color_list[train_mode_indices], s=0, alpha=0.3)
+pred_x, pred_y = [], []
+sc2 = ax.scatter(pred_x, pred_y, s=30, marker="+", cmap='paried')
 plt.draw()
 
 # ==============================   create the learner object    ========================================
@@ -72,7 +80,7 @@ loss_trace = []
 theta_trace = []
 optimizier = opt.Adam()
 optimizier.learning_rate = 1e-2
-for k in range(8000):
+for k in range(5000):
     # mini batch dataset
     shuffle_index = np.random.permutation(train_data_size)[0:mini_batch_size]
     x_mini_batch = train_x_batch[shuffle_index]
@@ -108,6 +116,8 @@ for k in range(8000):
         pred_y = pred_x_next_batch[:, plot_y_indx]
         sc.set_offsets(np.c_[pred_x, pred_y])
         sc.set_array(color_list[pred_mode_indices])
+        sc2.set_offsets(np.c_[pred_x, pred_y])
+        sc2.set_array(color_list[pred_mode_indices])
         fig.canvas.draw_idle()
         plt.pause(0.1)
 
