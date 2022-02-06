@@ -61,7 +61,7 @@ plt.show()
 data_generator = test_class.LCS_learner(n_state, n_lam, A, C, D, G, lcp_offset, stiffness=0)
 # generate the testing data
 test_data_size = 1000
-test_x_batch = 1 * np.random.uniform(-1, 1, size=(test_data_size, n_state))
+test_x_batch = .02 * np.random.uniform(-1, 1, size=(test_data_size, n_state))
 test_x_next_batch, test_lam_opt_batch = data_generator.dyn_prediction(test_x_batch, theta_val=[])
 # check the mode index
 test_mode_list, test_mode_frequency_list = test_class.statiModes(test_lam_opt_batch)
@@ -69,7 +69,7 @@ test_mode_list, test_mode_indices = test_class.plotModes(test_lam_opt_batch)
 
 # ==============================   create the learner object    ========================================
 # ！！！！！！！！！！！！！！！！ make sure matching with line 60-63 in the train.py
-learner = test_class.LCS_learner(n_state, n_lam=n_lam, stiffness=10)
+learner = test_class.LCS_learner(n_state, n_lam=2, stiffness=10)
 
 
 

@@ -1,0 +1,1 @@
+This is to show the reduced order model, the setting are the same as res_4

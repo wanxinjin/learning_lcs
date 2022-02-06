@@ -29,7 +29,7 @@ lcp_offset = lcs_mats['lcp_offset']
 # create the data generator
 data_generator = test_class.LCS_learner(n_state, n_lam, A, C, D, G, lcp_offset, stiffness=0)
 train_data_size = 1000
-train_x_batch = 1 * np.random.uniform(-1, 1, size=(train_data_size, n_state))
+train_x_batch = 0.1 * np.random.uniform(-1, 1, size=(train_data_size, n_state))
 train_x_next_batch, train_lam_opt_batch = data_generator.dyn_prediction(train_x_batch, theta_val=[])
 train_mode_list, train_mode_frequency_list = test_class.statiModes(train_lam_opt_batch)
 print('number of modes in the training data:', train_mode_frequency_list.size)
