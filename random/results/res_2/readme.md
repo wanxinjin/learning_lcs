@@ -1,1 +1,0 @@
-this shows that the error mainly comes from rare modes

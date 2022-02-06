@@ -37,7 +37,6 @@ print('mode count for prediction data:', learned_res['pred_mode_count'])
 print('mode list for prediction data:\n', learned_res['pred_mode_list'])
 print('mode frequency for prediction data:\n', learned_res['pred_mode_frequency'])
 print('prediction accuracy for each mode:\n', learned_res['pred_error_per_mode_list'])
-print('overall relative prediction error:', learned_res['relative_error'])
 print('---------------------------------------------------------------------------')
 
 
@@ -97,7 +96,6 @@ print('mode count for prediction data:', pred_mode_frequency_list.size)
 print('mode list for prediction data:\n', pred_mode_list0)
 print('mode frequency for prediction data:\n', pred_mode_frequency_list)
 print('prediction accuracy for each mode:\n', pred_error_per_mode_list)
-
 print('---------------------------------------------------------------------------')
 
 
@@ -143,7 +141,7 @@ ax.scatter(test_x, pred_y, c=color_list[pred_mode_indices], s=40, marker="^")
 print('------------------------------------------------')
 error_x_next_batch = pred_x_next_batch - test_x_next_batch
 relative_error = (la.norm(error_x_next_batch, axis=1) / la.norm(test_x_next_batch, axis=1)).mean()
-print('overall relative prediction error:', relative_error)
+print('relative prediction error:', relative_error)
 
 if False:
     print('------------------------------------------------')

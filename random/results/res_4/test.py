@@ -37,6 +37,7 @@ print('mode count for prediction data:', learned_res['pred_mode_count'])
 print('mode list for prediction data:\n', learned_res['pred_mode_list'])
 print('mode frequency for prediction data:\n', learned_res['pred_mode_frequency'])
 print('prediction accuracy for each mode:\n', learned_res['pred_error_per_mode_list'])
+print('overall prediction accuracy:\n', learned_res['relative_error'])
 print('---------------------------------------------------------------------------')
 
 
@@ -61,7 +62,7 @@ plt.show()
 data_generator = test_class.LCS_learner(n_state, n_lam, A, C, D, G, lcp_offset, stiffness=0)
 # generate the testing data
 test_data_size = 1000
-test_x_batch = .1 * np.random.uniform(-1, 1, size=(test_data_size, n_state))
+test_x_batch = 1* np.random.uniform(-1, -0.5, size=(test_data_size, n_state))
 test_x_next_batch, test_lam_opt_batch = data_generator.dyn_prediction(test_x_batch, theta_val=[])
 # check the mode index
 test_mode_list, test_mode_frequency_list = test_class.statiModes(test_lam_opt_batch)
@@ -141,7 +142,7 @@ ax.scatter(test_x, pred_y, c=color_list[pred_mode_indices], s=40, marker="^")
 print('------------------------------------------------')
 error_x_next_batch = pred_x_next_batch - test_x_next_batch
 relative_error = (la.norm(error_x_next_batch, axis=1) / la.norm(test_x_next_batch, axis=1)).mean()
-print('relative prediction error:', relative_error)
+print('overall relative prediction error:', relative_error)
 
 if False:
     print('------------------------------------------------')

@@ -1,3 +1,5 @@
+import numpy as np
+
 import test_class
 import lcs.optim as opt
 import numpy.linalg as la
@@ -68,7 +70,7 @@ sc2 = ax.scatter(pred_x, pred_y, s=30, marker="+", cmap='paried')
 plt.draw()
 
 # ==============================   create the learner object    ========================================
-learner = test_class.LCS_learner(n_state, n_lam=2, stiffness=10)
+learner = test_class.LCS_learner(n_state, n_lam=n_lam, stiffness=10)
 true_theta = vertcat(vec(G), vec(D), lcp_offset, vec(A), vec(C)).full().flatten()
 
 # ================================   beginning the training process    ======================================
@@ -80,7 +82,7 @@ loss_trace = []
 theta_trace = []
 optimizier = opt.Adam()
 optimizier.learning_rate = 1e-2
-for k in range(7000):
+for k in range(5000):
     # mini batch dataset
     shuffle_index = np.random.permutation(train_data_size)[0:mini_batch_size]
     x_mini_batch = train_x_batch[shuffle_index]
@@ -112,12 +114,14 @@ for k in range(7000):
         pred_mode_list, pred_mode_indices = test_class.plotModes(pred_lam_batch)
 
         # plot the learned mode
+        color_list_dyn=np.linspace(0.1,0.99, len(pred_mode_list))
+        # color1=color_list_dyn[pred_mode_indices]
         pred_x = train_x_batch[:, plot_x_indx]
         pred_y = pred_x_next_batch[:, plot_y_indx]
         sc.set_offsets(np.c_[pred_x, pred_y])
-        sc.set_array(color_list[pred_mode_indices])
+        sc.set_array(color_list_dyn[pred_mode_indices])
         sc2.set_offsets(np.c_[pred_x, pred_y])
-        sc2.set_array(color_list[pred_mode_indices])
+        sc2.set_array(color_list_dyn[pred_mode_indices])
         fig.canvas.draw_idle()
         plt.pause(0.1)
 
@@ -154,6 +158,10 @@ print(pred_mode_list0)
 print(pred_mode_list1)
 print(pred_mode_frequency_list)
 print(pred_error_per_mode_list)
+
+
+
+
 
 # take out the plot dimension
 pred_x = train_x_batch[:, plot_x_indx]
