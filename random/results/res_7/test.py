@@ -59,27 +59,6 @@ plt.show()
 
 
 
-# ==============================# do some analyais on training plot   ==================================
-learned_res = np.load('learned.npy', allow_pickle=True).item()
-learned_theta = learned_res['theta_trace'][-1]
-print('####################training results analysis#########################')
-# do a small analysis
-learned_lam_batch = learned_res['pred_lam_batch']
-learned_dist_batch = learned_res['pred_dist_batch']
-
-learned_mode_list = learned_res['pred_mode_list']
-for i in range(learned_res['pred_mode_count']):
-    print('mode:', learned_mode_list[i])
-    print('frequency:', learned_res['pred_mode_frequency'][i])
-    print('accuracy:', learned_res['pred_error_per_mode_list'][i])
-    mode_i_indices = np.where(learned_mode_indices == i)[0]
-    mode_i_dist = learned_dist_batch[mode_i_indices]
-    mode_i_lam=learned_lam_batch[mode_i_indices]
-
-    print('mean_distance:', mode_i_dist.mean(axis=0))
-    print('mean_lam:', mode_i_lam.mean(axis=0))
-    print('mean_l')
-
 
 
 # ==============================   generate the testing data    ========================================
@@ -87,7 +66,7 @@ for i in range(learned_res['pred_mode_count']):
 data_generator = test_class.LCS_learner(n_state, n_lam, A, C, D, G, lcp_offset, stiffness=0)
 # generate the testing data
 test_data_size =2000
-test_x_batch = 0.01* np.random.uniform(-1, 1, size=(test_data_size, n_state))
+test_x_batch = 1* np.random.uniform(-1, 1, size=(test_data_size, n_state))
 test_x_next_batch, test_lam_opt_batch = data_generator.dyn_prediction(test_x_batch, theta_val=[])
 # check the mode index
 test_mode_list, test_mode_frequency_list = test_class.statiModes(test_lam_opt_batch)
@@ -95,7 +74,7 @@ test_mode_list, test_mode_indices = test_class.plotModes(test_lam_opt_batch)
 
 # ==============================   create the learner object    ========================================
 # ！！！！！！！！！！！！！！！！ make sure matching with line 60-63 in the train.py
-learner = test_class.LCS_learner3(n_state, n_lam=n_lam, stiffness=10)
+learner = test_class.LCS_learner3(n_state, n_lam=2, stiffness=100)
 
 # ================================   do some anlaysis for the prediction    ======================================
 pred_x_next_batch, pred_lam_opt_batch = learner.dyn_prediction(test_x_batch, learned_theta)
