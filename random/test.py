@@ -37,6 +37,7 @@ print('mode count for prediction data:', learned_res['pred_mode_count'])
 print('mode list for prediction data:\n', learned_res['pred_mode_list'])
 print('mode frequency for prediction data:\n', learned_res['pred_mode_frequency'])
 print('prediction accuracy for each mode:\n', learned_res['pred_error_per_mode_list'])
+print('overall relative prediction error: \n', learned_res['relative_error'])
 print('---------------------------------------------------------------------------')
 
 

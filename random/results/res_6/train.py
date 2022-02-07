@@ -1,5 +1,3 @@
-import numpy as np
-
 import test_class
 import lcs.optim as opt
 import numpy.linalg as la
@@ -30,8 +28,8 @@ lcp_offset = lcs_mats['lcp_offset']
 # ==============================   generate the training data    ========================================
 # create the data generator
 data_generator = test_class.LCS_learner(n_state, n_lam, A, C, D, G, lcp_offset, stiffness=0)
-train_data_size = 10000
-train_x_batch = 1 * np.random.uniform(-1, 1, size=(train_data_size, n_state))
+train_data_size = 2000
+train_x_batch = 1 * np.random.uniform(-2, -0.5, size=(train_data_size, n_state))
 train_x_next_batch, train_lam_opt_batch = data_generator.dyn_prediction(train_x_batch, theta_val=[])
 train_mode_list, train_mode_frequency_list = test_class.statiModes(train_lam_opt_batch)
 print('number of modes in the training data:', train_mode_frequency_list.size)
@@ -114,14 +112,12 @@ for k in range(5000):
         pred_mode_list, pred_mode_indices = test_class.plotModes(pred_lam_batch)
 
         # plot the learned mode
-        color_list_dyn=np.linspace(0.1,0.99, len(pred_mode_list))
-        # color1=color_list_dyn[pred_mode_indices]
         pred_x = train_x_batch[:, plot_x_indx]
         pred_y = pred_x_next_batch[:, plot_y_indx]
         sc.set_offsets(np.c_[pred_x, pred_y])
-        sc.set_array(color_list_dyn[pred_mode_indices])
+        sc.set_array(color_list[pred_mode_indices])
         sc2.set_offsets(np.c_[pred_x, pred_y])
-        sc2.set_array(color_list_dyn[pred_mode_indices])
+        sc2.set_array(color_list[pred_mode_indices])
         fig.canvas.draw_idle()
         plt.pause(0.1)
 
@@ -158,10 +154,6 @@ print(pred_mode_list0)
 print(pred_mode_list1)
 print(pred_mode_frequency_list)
 print(pred_error_per_mode_list)
-
-
-
-
 
 # take out the plot dimension
 pred_x = train_x_batch[:, plot_x_indx]

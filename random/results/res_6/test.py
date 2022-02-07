@@ -25,7 +25,6 @@ G = lcs_mats['G']
 F = lcs_mats['F']
 lcp_offset = lcs_mats['lcp_offset']
 
-
 # ==============================# re-show the training plot   ==================================
 learned_res = np.load('learned.npy', allow_pickle=True).item()
 learned_theta = learned_res['theta_trace'][-1]
@@ -37,9 +36,8 @@ print('mode count for prediction data:', learned_res['pred_mode_count'])
 print('mode list for prediction data:\n', learned_res['pred_mode_list'])
 print('mode frequency for prediction data:\n', learned_res['pred_mode_frequency'])
 print('prediction accuracy for each mode:\n', learned_res['pred_error_per_mode_list'])
-print('overall prediction accuracy:\n', learned_res['relative_error'])
+print('overall relative prediction error: \n', learned_res['relative_error'])
 print('---------------------------------------------------------------------------')
-
 
 # plot the true one
 fig0, ax = plt.subplots()
@@ -52,17 +50,19 @@ ax.set_title('Learned modes marked in (^), \n True modes marked in (o)')
 plt.scatter(train_x, train_y, c=color_list[train_mode_indices], s=80, alpha=0.3)
 # plot the predicted one
 ax.scatter(train_x, learned_y, c=color_list[learned_mode_indices], s=40, marker="^")
+for i in range(learned_res['pred_mode_count']):
+    index_i = np.where(learned_mode_indices == i)[0][0]
+    print(index_i)
+    ax.scatter(train_x[index_i], learned_y[index_i], s=80, alpha=0.99, label=str(i))
+ax.legend()
 plt.show()
-
-
-
 
 # ==============================   generate the testing data    ========================================
 # ！！！！！！！！！！！！！！！！make sure matching with line 27-33 in the train.py
 data_generator = test_class.LCS_learner(n_state, n_lam, A, C, D, G, lcp_offset, stiffness=0)
 # generate the testing data
 test_data_size = 1000
-test_x_batch = 1 * np.random.uniform(-1, -0.5, size=(test_data_size, n_state))
+test_x_batch = 1 * np.random.uniform(-1, 1, size=(test_data_size, n_state))
 test_x_next_batch, test_lam_opt_batch = data_generator.dyn_prediction(test_x_batch, theta_val=[])
 # check the mode index
 test_mode_list, test_mode_frequency_list = test_class.statiModes(test_lam_opt_batch)
@@ -71,8 +71,6 @@ test_mode_list, test_mode_indices = test_class.plotModes(test_lam_opt_batch)
 # ==============================   create the learner object    ========================================
 # ！！！！！！！！！！！！！！！！ make sure matching with line 60-63 in the train.py
 learner = test_class.LCS_learner(n_state, n_lam=n_lam, stiffness=10)
-
-
 
 # ================================   do some anlaysis for the prediction    ======================================
 pred_x_next_batch, pred_lam_opt_batch = learner.dyn_prediction(test_x_batch, learned_theta)
@@ -99,12 +97,9 @@ print('mode frequency for prediction data:\n', pred_mode_frequency_list)
 print('prediction accuracy for each mode:\n', pred_error_per_mode_list)
 print('---------------------------------------------------------------------------')
 
-
-
 # =============== plot the training data, each color for each mode  ======================================
 plot_x_indx = 0
 plot_y_indx = 0
-
 
 # plot the true one
 fig1, ax = plt.subplots()
@@ -112,7 +107,6 @@ ax.set_title('True modes marked in (o)')
 test_x = test_x_batch[:, plot_x_indx]
 test_y = test_x_next_batch[:, plot_y_indx]
 plt.scatter(test_x, test_y, c=color_list[test_mode_indices], s=80, alpha=1)
-
 
 # plot the true one
 fig2, ax = plt.subplots()

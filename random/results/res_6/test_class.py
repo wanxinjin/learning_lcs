@@ -214,6 +214,7 @@ def statiModes(lam_batch, tol=1e-5):
     unique_mode_list, mode_count_list = np.unique(lam_batch_mode, axis=0, return_counts=True)
     mode_frequency_list = mode_count_list / lam_batch.shape[0]
 
+
     return unique_mode_list, mode_frequency_list
 
 
