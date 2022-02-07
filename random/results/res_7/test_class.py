@@ -171,7 +171,6 @@ class LCS_learner:
         opts = {'printLevel': 'none'}
         lcp_Solver = qpsol('lcp_solver', 'qpoases', quadprog, opts)
         self.lcp_fn = Function('dist_fn', [self.x, self.lam, self.theta], [self.dist, dot(self.dist, self.lam)])
-        self.lcp_dist_fn = Function('dist_fn', [self.x, self.lam, self.theta], [self.dist])
 
         # establish the dynamics equation
         dyn = self.A @ self.x + self.C @ self.lam
@@ -371,7 +370,6 @@ class LCS_learner2:
         opts = {'printLevel': 'none'}
         lcp_Solver = qpsol('lcp_solver', 'qpoases', quadprog, opts)
         self.lcp_fn = Function('dist_fn', [self.x, self.lam, self.theta], [self.dist, dot(self.dist, self.lam)])
-        self.lcp_dist_fn = Function('dist_fn', [self.x, self.lam, self.theta], [self.dist])
 
         # establish the dynamics equation
         dyn = self.A @ self.x + self.C @ self.lam
@@ -404,7 +402,7 @@ class LCS_learner2:
 
 
 class LCS_learner3:
-    def __init__(self, n_state, n_lam, A=None, C=None, D=None, G=None, lcp_offset=None, stiffness=0.):
+    def __init__(self, n_state, n_lam, A=None, C=None, D=None, G=None, H=None, lcp_offset=None, stiffness=0.):
         self.n_lam = n_lam
         self.n_state = n_state
 
@@ -418,6 +416,12 @@ class LCS_learner3:
             self.theta += [vec(self.G)]
         else:
             self.G = DM(G)
+
+        if H is None:
+            self.H = SX.sym('H', self.n_lam, self.n_lam)
+            self.theta += [vec(self.H)]
+        else:
+            self.H = DM(H)
 
         if D is None:
             self.D = SX.sym('D', self.n_lam, self.n_state)
@@ -446,7 +450,7 @@ class LCS_learner3:
         self.theta = vcat(self.theta)
         self.n_theta = self.theta.numel()
 
-        self.F = stiffness * np.eye(self.n_lam) + self.G @ self.G.T
+        self.F = stiffness * np.eye(self.n_lam) + self.G @ self.G.T + self.H - self.H.T
         self.F_fn = Function('F_fn', [self.theta], [self.F])
         self.D_fn = Function('D_fn', [self.theta], [self.D])
         self.G_fn = Function('G_fn', [self.theta], [self.G])
@@ -454,7 +458,7 @@ class LCS_learner3:
         self.C_fn = Function('C_fn', [self.theta], [self.C])
         self.lcp_offset_fn = Function('lcp_offset_fn', [self.theta], [self.lcp_offset])
 
-    def differetiable(self, gamma=1e-4, epsilon=1e0):
+    def differetiable(self, gamma=1e-4, epsilon=1e-1):
 
         # define the dynamics loss
         self.x_next = SX.sym('x_next', self.n_state)
@@ -465,12 +469,13 @@ class LCS_learner3:
         # lcp loss
         self.dist = self.D @ self.x + self.F @ self.lam + self.lcp_offset
         self.phi = SX.sym('phi', self.n_lam)
-        lcp_loss = dot(self.lam, self.phi)  + 1 / gamma * dot(self.phi - self.dist,
-                                                                                   self.phi - self.dist)
+        lcp_loss = dot(self.lam, self.phi) + 1 / gamma * dot(self.phi - self.dist,
+                                                             self.phi - self.dist)
 
         # total loss
-        loss = (dyn_loss + lcp_loss / epsilon) / dot(self.x, self.x)
-        # loss = (dyn_loss + lcp_loss / epsilon)
+        # loss = (dyn_loss + lcp_loss / epsilon) / dot(self.x_next - self.x, self.x_next - self.x)
+        loss = dyn_loss / dot(self.x_next, self.x_next) + lcp_loss / epsilon
+        # loss = dyn_loss + lcp_loss / epsilon
 
         # establish the qp solver
         lam_phi = vertcat(self.lam, self.phi)
@@ -602,10 +607,6 @@ class LCS_learner3:
         x_next_batch = dyn_fn(x_batch.T, lam_opt_batch.T, theta_val_batch.T).full().T
 
         return x_next_batch, lam_opt_batch
-
-
-
-
 
 
 # do statistics for the modes

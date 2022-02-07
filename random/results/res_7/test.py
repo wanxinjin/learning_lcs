@@ -51,11 +51,13 @@ ax.set_title('Learned modes marked in (^), \n True modes marked in (o)')
 plt.scatter(train_x, train_y, c=color_list[train_mode_indices], s=80, alpha=0.3)
 # plot the predicted one
 ax.scatter(train_x, learned_y, c=color_list[learned_mode_indices], s=40, marker="^")
-for i in range(learned_res['pred_mode_count']):
-    index_i = np.where(learned_mode_indices == i)[0][0]
-    ax.scatter(train_x[index_i], learned_y[index_i], s=80, alpha=0.99, label=str(i))
-ax.legend()
+# for i in range(learned_res['pred_mode_count']):
+#     index_i = np.where(learned_mode_indices == i)[0][0]
+#     ax.scatter(train_x[index_i], learned_y[index_i],  s=80, alpha=0.99, label=str(i))
+# ax.legend()
 plt.show()
+
+
 
 # ==============================# do some analyais on training plot   ==================================
 learned_res = np.load('learned.npy', allow_pickle=True).item()
@@ -79,12 +81,13 @@ for i in range(learned_res['pred_mode_count']):
     print('mean_l')
 
 
+
 # ==============================   generate the testing data    ========================================
 # ！！！！！！！！！！！！！！！！make sure matching with line 27-33 in the train.py
 data_generator = test_class.LCS_learner(n_state, n_lam, A, C, D, G, lcp_offset, stiffness=0)
 # generate the testing data
-test_data_size = 1000
-test_x_batch = 0.01 * np.random.uniform(-1, 1, size=(test_data_size, n_state))
+test_data_size =2000
+test_x_batch = 0.01* np.random.uniform(-1, 1, size=(test_data_size, n_state))
 test_x_next_batch, test_lam_opt_batch = data_generator.dyn_prediction(test_x_batch, theta_val=[])
 # check the mode index
 test_mode_list, test_mode_frequency_list = test_class.statiModes(test_lam_opt_batch)
@@ -92,7 +95,7 @@ test_mode_list, test_mode_indices = test_class.plotModes(test_lam_opt_batch)
 
 # ==============================   create the learner object    ========================================
 # ！！！！！！！！！！！！！！！！ make sure matching with line 60-63 in the train.py
-learner = test_class.LCS_learner3(n_state, n_lam=n_lam, stiffness=1)
+learner = test_class.LCS_learner3(n_state, n_lam=n_lam, stiffness=10)
 
 # ================================   do some anlaysis for the prediction    ======================================
 pred_x_next_batch, pred_lam_opt_batch = learner.dyn_prediction(test_x_batch, learned_theta)
@@ -190,6 +193,7 @@ if False:
     print('learned')
     print(learner.F_fn(learned_theta))
     print(la.eigvals(F))
+
 
     print('------------------------------------------------')
     print('lcp_offset')

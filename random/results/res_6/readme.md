@@ -1,1 +1,1 @@
-This is to test the valid range
+This is to add a bias to the LCP equation

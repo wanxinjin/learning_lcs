@@ -68,7 +68,7 @@ sc2 = ax.scatter(pred_x, pred_y, s=30, marker="+", cmap='paried')
 plt.draw()
 
 # ==============================   create the learner object    ========================================
-learner = test_class.LCS_learner3(n_state, n_lam=n_lam, stiffness=1)
+learner = test_class.LCS_learner3(n_state, n_lam=n_lam, stiffness=10)
 true_theta = vertcat(vec(G), vec(D), lcp_offset, vec(A), vec(C)).full().flatten()
 
 # ================================   beginning the training process    ======================================
@@ -127,9 +127,10 @@ for k in range(5000):
             '| grad:', norm_2(dtheta),
             '| dyn_loss:', dyn_loss,
             '| lcp_loss:', lcp_loss,
-            '| relative_prediction_error:', relative_error,
-            '| pred_mode_counts:', len(pred_mode_list),
+            '| RP_error:', relative_error,
+            '| PMC:', len(pred_mode_list),
         )
+
 
 # save
 
