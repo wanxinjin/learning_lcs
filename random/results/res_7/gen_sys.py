@@ -2,8 +2,8 @@ import test_class
 import numpy as np
 
 # generate the data
-n_state = 3
-n_lam = 3
+n_state = 4
+n_lam = 2
 # np.random.seed(1)
 A = np.random.randn(n_state, n_state)
 C = np.random.randn(n_state, n_lam)
