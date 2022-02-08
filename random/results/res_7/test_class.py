@@ -458,7 +458,7 @@ class LCS_learner3:
         self.C_fn = Function('C_fn', [self.theta], [self.C])
         self.lcp_offset_fn = Function('lcp_offset_fn', [self.theta], [self.lcp_offset])
 
-    def differetiable(self, gamma=1e-2, epsilon=1e0):
+    def differetiable(self, gamma=1e0, epsilon=1e2):
 
         # define the dynamics loss
         self.x_next = SX.sym('x_next', self.n_state)
@@ -476,6 +476,7 @@ class LCS_learner3:
         # loss = (dyn_loss + lcp_loss / epsilon) / dot(self.x_next - self.x, self.x_next - self.x)
         # loss = dyn_loss / dot(self.x_next, self.x_next) + lcp_loss / epsilon
         loss = dyn_loss + lcp_loss / epsilon
+        # loss = (dyn_loss + lcp_loss / epsilon) / dot(self.x_next, self.x_next)
 
         # establish the qp solver
         lam_phi = vertcat(self.lam, self.phi)

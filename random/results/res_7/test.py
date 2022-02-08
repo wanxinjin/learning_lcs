@@ -74,7 +74,7 @@ test_mode_list, test_mode_indices = test_class.plotModes(test_lam_opt_batch)
 
 # ==============================   create the learner object    ========================================
 # ！！！！！！！！！！！！！！！！ make sure matching with line 60-63 in the train.py
-learner = test_class.LCS_learner3(n_state, n_lam=2, stiffness=100)
+learner = test_class.LCS_learner3(n_state, n_lam=n_lam, stiffness=10)
 
 # ================================   do some anlaysis for the prediction    ======================================
 pred_x_next_batch, pred_lam_opt_batch = learner.dyn_prediction(test_x_batch, learned_theta)
