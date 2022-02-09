@@ -54,8 +54,8 @@ train_mode_list, train_mode_indices = cartpole_class.plotModes(train_lam_opt_bat
 
 # =============== plot the training data, each color for each mode  ======================================
 # plot dimension index
-plot_x_indx = 0
-plot_y_indx = 0
+plot_x_indx = 3
+plot_y_indx = 3
 
 plt.figure()
 plt.title('True modes marked in (o)')
