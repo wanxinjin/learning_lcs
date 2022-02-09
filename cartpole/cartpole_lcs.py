@@ -26,10 +26,19 @@ A = [[0, 0, 1, 0], [0, 0, 0, 1], [0, g * mp / mc, 0, 0], [0, g * (mc + mp) / (le
 A = np.asarray(A)
 B = [[0], [0], [1 / mc], [1 / (len_com * mc)]]
 B = np.asarray(B)
+
 C = [[0, 0], [0, 0], [(-1 / mc) + (len_p / (mc * len_com)), (1 / mc) - (len_p / (mc * len_com))],
      [(-1 / (mc * len_com)) + (len_p * (mc + mp)) / (mc * mp * len_com * len_com),
       -((-1 / (mc * len_com)) + (len_p * (mc + mp)) / (mc * mp * len_com * len_com))]]
+
+# C=np.asarray([[0,0],
+#                [0, 0],
+#                [1, 0],
+#                [0, 1]])
 C = np.asarray(C)
+
+
+
 D = [[-1, len_p, 0, 0], [1, -len_p, 0, 0]]
 D = np.asarray(D)
 F = 1 / ks * np.eye(2)

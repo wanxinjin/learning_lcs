@@ -34,8 +34,8 @@ lcp_offset = lcs_mats['lcp_offset']
 data_generator = cartpole_class.cartpole_learner(n_state, n_control, n_lam,
                                                  A, B, C, D, E, G, H, lcp_offset, stiffness=0)
 train_data_size = 2000
-train_x_batch = 0.5 * np.random.uniform(-1, 1, size=(train_data_size, n_state))
-train_u_batch = 0.5 * np.random.uniform(-1, 1, size=(train_data_size, n_control))
+train_x_batch = 0.35* np.random.uniform(-1, 1, size=(train_data_size, n_state))
+train_u_batch = 1 * np.random.uniform(-1, 1, size=(train_data_size, n_control))
 train_x_next_batch, train_lam_opt_batch = data_generator.dyn_prediction(train_x_batch, train_u_batch, theta_val=[])
 train_mode_list, train_mode_frequency_list = cartpole_class.statiModes(train_lam_opt_batch)
 print('number of modes in the training data:', train_mode_frequency_list.size)
@@ -74,13 +74,13 @@ sc2 = ax.scatter(pred_x, pred_y, s=30, marker="+", cmap='paried')
 plt.draw()
 
 # ==============================   create the learner object    ========================================
-learner = cartpole_class.cartpole_learner(n_state, n_control, n_lam=n_lam, stiffness=0.01)
+learner = cartpole_class.cartpole_learner(n_state, n_control, n_lam=n_lam, stiffness=10)
 
 # ================================   beginning the training process    ======================================
 # doing learning process
 curr_theta = 0.1 * np.random.randn(learner.n_theta)
 # curr_theta = true_theta + 2 * np.random.randn(learner.n_theta)
-mini_batch_size = 200
+mini_batch_size = 300
 loss_trace = []
 theta_trace = []
 optimizier = opt.Adam()

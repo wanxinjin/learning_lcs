@@ -73,6 +73,7 @@ test_mode_list, test_mode_indices = cartpole_class.plotModes(test_lam_opt_batch)
 # ！！！！！！！！！！！！！！！！ make sure matching with line 60-63 in the train.py
 learner = cartpole_class.cartpole_learner(n_state, n_control, n_lam=n_lam, stiffness=10)
 
+
 # ================================   do some anlaysis for the prediction    ======================================
 pred_x_next_batch, pred_lam_opt_batch = learner.dyn_prediction(test_x_batch, test_u_batch, learned_theta)
 # compute the overall relative prediction error

@@ -79,7 +79,7 @@ class cartpole_learner:
         self.C_fn = Function('C_fn', [self.theta], [self.C])
         self.lcp_offset_fn = Function('lcp_offset_fn', [self.theta], [self.lcp_offset])
 
-    def differetiable(self, gamma=1e2, epsilon=1e1):
+    def differetiable(self, gamma=1e0, epsilon=1e1):
 
         # define the dynamics loss
         self.x_next = SX.sym('x_next', self.n_state)
@@ -97,6 +97,179 @@ class cartpole_learner:
         loss = dyn_loss + lcp_loss / epsilon
         # loss = dot(self.dyn[2:4] - self.x_next[2:4], self.dyn[2:4] - self.x_next[2:4]) + lcp_loss / epsilon
         # loss = (dyn_loss + lcp_loss / epsilon) / (0.5+dot(self.x_next, self.x_next))
+
+        # establish the qp solver
+        lam_phi = vertcat(self.lam, self.phi)
+        data_theta = vertcat(self.x, self.u, self.x_next, self.theta)
+        quadprog = {'x': vertcat(self.lam, self.phi), 'f': loss, 'p': data_theta}
+        opts = {'printLevel': 'none', }
+        self.inner_QPSolver = qpsol('inner_QPSolver', 'qpoases', quadprog, opts)
+
+        # compute the jacobian from lam to theta
+        self.loss_fn = Function('loss_fn', [data, self.theta, lam_phi], [loss])
+        self.dloss_fn = Function('dloss_fn', [data, self.theta, lam_phi], [jacobian(loss, self.theta).T])
+        self.dyn_loss_fn = Function('dyn_loss_fn', [data, self.theta, lam_phi], [dyn_loss])
+        self.lcp_loss_fn = Function('lcp_loss_fn', [data, self.theta, lam_phi], [lcp_loss])
+
+        # compute the second order derivative
+        # TBD
+
+    def compute_lambda(self, x_batch, u_batch, x_next_batch, theta_val):
+        self.differetiable()
+
+        # prepare the data
+        batch_size = x_batch.shape[0]
+        data_batch = np.hstack((x_batch, u_batch, x_next_batch))
+        theta_val_batch = np.tile(theta_val, (batch_size, 1))
+        data_theta_batch = np.hstack((data_batch, theta_val_batch))
+
+        # compute the lam_phi solution
+        sol_batch = self.inner_QPSolver(lbx=0.0, p=data_theta_batch.T)
+        loss_opt_batch = sol_batch['f'].full().flatten()
+        lam_phi_opt_batch = sol_batch['x'].full().T
+
+        return lam_phi_opt_batch, loss_opt_batch
+
+    def gradient_step(self, x_batch, u_batch, x_next_batch, theta_val, lam_phi_opt_batch, second_order=False):
+        batch_size = x_batch.shape[0]
+        data_batch = np.hstack((x_batch, u_batch, x_next_batch))
+        theta_val_batch = np.tile(theta_val, (batch_size, 1))
+
+        # compute the gradient value
+        dtheta_batch = self.dloss_fn(data_batch.T, theta_val_batch.T, lam_phi_opt_batch.T)
+        dtheta_mean = dtheta_batch.full().mean(axis=1)
+
+        # compute the losses
+        loss_batch = self.loss_fn(data_batch.T, theta_val_batch.T, lam_phi_opt_batch.T)
+        dyn_loss_batch = self.dyn_loss_fn(data_batch.T, theta_val_batch.T, lam_phi_opt_batch.T)
+        lcp_loss_batch = self.lcp_loss_fn(data_batch.T, theta_val_batch.T, lam_phi_opt_batch.T)
+        loss_mean = loss_batch.full().mean()
+        dyn_loss_mean = dyn_loss_batch.full().mean()
+        lcp_loss_mean = lcp_loss_batch.full().mean()
+
+        return dtheta_mean, loss_mean, dyn_loss_mean, lcp_loss_mean
+
+    def dyn_prediction(self, x_batch, u_batch, theta_val):
+        self.differetiable()
+
+        batch_size = x_batch.shape[0]
+        theta_val_batch = np.tile(theta_val, (batch_size, 1))
+        xu_theta_batch = np.hstack((x_batch, u_batch, theta_val_batch))
+
+        # establish the lcp solver
+        lcp_loss = dot(self.dist, self.lam)
+        xu_theta = vertcat(self.x, self.u, self.theta)
+        quadprog = {'x': self.lam, 'f': lcp_loss, 'g': self.dist, 'p': xu_theta}
+        opts = {'printLevel': 'none'}
+        lcp_Solver = qpsol('lcp_solver', 'qpoases', quadprog, opts)
+        self.lcp_fn = Function('dist_fn', [self.x, self.u, self.lam, self.theta], [self.dist, dot(self.dist, self.lam)])
+        self.lcp_dist_fn = Function('dist_fn', [self.x, self.u, self.lam, self.theta], [self.dist])
+
+        # establish the dynamics equation
+        dyn_fn = Function('dyn_fn', [self.x, self.u, self.lam, self.theta], [self.dyn])
+
+        # compute the lam_batch
+        sol_batch = lcp_Solver(lbx=0., lbg=0., p=xu_theta_batch.T)
+        lam_opt_batch = sol_batch['x'].full().T
+
+        # compute the next state batch
+        x_next_batch = dyn_fn(x_batch.T, u_batch.T, lam_opt_batch.T, theta_val_batch.T).full().T
+
+        return x_next_batch, lam_opt_batch
+
+
+class cartpole_learner2:
+    def __init__(self, n_state, n_control, n_lam,
+                 A=None, B=None, C=None, D=None, E=None, G=None, H=None, lcp_offset=None,
+                 stiffness=0.):
+        self.n_lam = n_lam
+        self.n_state = n_state
+        self.n_control = n_control
+
+        self.lam = SX.sym('lam', self.n_lam)
+        self.x = SX.sym('x', self.n_state)
+        self.u = SX.sym('u', self.n_control)
+
+        self.theta = []
+
+        if lcp_offset is None:
+            self.lcp_offset = SX.sym('lcp_offset', self.n_lam)
+            self.theta += [vec(self.lcp_offset)]
+        else:
+            self.lcp_offset = DM(lcp_offset)
+
+        if A is None:
+            self.A = SX.sym('A', self.n_state, self.n_state)
+            self.theta += [vec(self.A)]
+        else:
+            self.A = DM(A)
+
+        if B is None:
+            self.B = SX.sym('B', self.n_state, self.n_control)
+            self.theta += [vec(self.B)]
+        else:
+            self.B = DM(B)
+
+        if C is None:
+            self.C = SX.sym('C', self.n_state, self.n_lam)
+            self.theta += [vec(self.C)]
+        else:
+            self.C = DM(C)
+
+        if D is None:
+            self.D = SX.sym('D', self.n_lam, self.n_state)
+            self.theta += [vec(self.D)]
+        else:
+            self.D = DM(D)
+
+        if E is None:
+            self.E = SX.sym('E', self.n_lam, self.n_control)
+            self.theta += [vec(self.E)]
+        else:
+            self.E = DM(E)
+
+        if G is None:
+            self.G = SX.sym('G', self.n_lam, self.n_lam)
+            self.theta += [vec(self.G)]
+        else:
+            self.G = DM(G)
+
+        if H is None:
+            self.H = SX.sym('H', self.n_lam, self.n_lam)
+            self.theta += [vec(self.H)]
+        else:
+            self.H = DM(H)
+
+        self.theta = vcat(self.theta)
+        self.n_theta = self.theta.numel()
+
+        self.F = stiffness * np.eye(self.n_lam) + self.G @ self.G.T + self.H - self.H.T
+        self.F_fn = Function('F_fn', [self.theta], [self.F])
+        self.D_fn = Function('D_fn', [self.theta], [self.D])
+        self.E_fn = Function('E_fn', [self.theta], [self.E])
+        self.G_fn = Function('G_fn', [self.theta], [self.G])
+        self.A_fn = Function('A_fn', [self.theta], [self.A])
+        self.B_fn = Function('B_fn', [self.theta], [self.B])
+        self.C_fn = Function('C_fn', [self.theta], [self.C])
+        self.lcp_offset_fn = Function('lcp_offset_fn', [self.theta], [self.lcp_offset])
+
+    def differetiable(self, gamma=1e2, epsilon=1e1):
+
+        # define the dynamics loss
+        self.x_next = SX.sym('x_next', self.n_state)
+        data = vertcat(self.x, self.u, self.x_next)
+        self.dyn = self.A @ self.x + self.B @ self.u + self.C @ self.lam
+        dyn_loss = dot(self.dyn - self.x_next, self.dyn - self.x_next)
+
+        # lcp loss
+        self.dist = self.D @ self.x + self.E @ self.u + self.F @ self.lam + self.lcp_offset
+        self.phi = SX.sym('phi', self.n_lam)
+        lcp_loss = dot(self.lam, self.phi) + 1 / gamma * dot(self.phi - self.dist,
+                                                             self.phi - self.dist)
+
+        # total loss
+        loss = dyn_loss + lcp_loss / epsilon
+        # loss = (dyn_loss + lcp_loss / epsilon)* dot(self.x_next - self.x, self.x_next - self.x)
 
         # establish the qp solver
         lam_phi = vertcat(self.lam, self.phi)
