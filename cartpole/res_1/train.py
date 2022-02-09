@@ -89,7 +89,7 @@ true_theta = vertcat(vec(A), vec(B), vec(C), vec(D), vec(E), vec(G), vec(H), vec
 # ================================   beginning the training process    ======================================
 # doing learning process
 # curr_theta = 0.1 * np.random.randn(learner.n_theta)
-curr_theta = true_theta + 0.09 * np.random.randn(learner.n_theta)
+curr_theta = true_theta + 0.1 * np.random.randn(learner.n_theta)
 print('initial parameter relative error:', norm_2(curr_theta-true_theta)/norm_2(true_theta))
 mini_batch_size = 300
 loss_trace = []
