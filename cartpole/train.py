@@ -34,8 +34,8 @@ lcp_offset = lcs_mats['lcp_offset']
 data_generator = cartpole_class.cartpole_learner(n_state, n_control, n_lam,
                                                  A, B, C, D, E, G, H, lcp_offset, stiffness=0)
 train_data_size = 2000
-train_x_batch = 1 * np.random.uniform(-1, 1, size=(train_data_size, n_state))
-train_u_batch = 1 * np.random.uniform(-1, 1, size=(train_data_size, n_control))
+train_x_batch = 0.5 * np.random.uniform(-1, 1, size=(train_data_size, n_state))
+train_u_batch = 0.5 * np.random.uniform(-1, 1, size=(train_data_size, n_control))
 train_x_next_batch, train_lam_opt_batch = data_generator.dyn_prediction(train_x_batch, train_u_batch, theta_val=[])
 train_mode_list, train_mode_frequency_list = cartpole_class.statiModes(train_lam_opt_batch)
 print('number of modes in the training data:', train_mode_frequency_list.size)
@@ -45,8 +45,8 @@ train_mode_list, train_mode_indices = cartpole_class.plotModes(train_lam_opt_bat
 
 # =============== plot the training data, each color for each mode  ======================================
 # plot dimension index
-plot_x_indx = 2
-plot_y_indx = 2
+plot_x_indx = 3
+plot_y_indx = 3
 
 plt.figure()
 plt.title('True modes marked in (o)')
@@ -74,7 +74,7 @@ sc2 = ax.scatter(pred_x, pred_y, s=30, marker="+", cmap='paried')
 plt.draw()
 
 # ==============================   create the learner object    ========================================
-learner = cartpole_class.cartpole_learner(n_state, n_control, n_lam=n_lam, stiffness=0.5)
+learner = cartpole_class.cartpole_learner(n_state, n_control, n_lam=n_lam, stiffness=0.01)
 
 # ================================   beginning the training process    ======================================
 # doing learning process

@@ -94,39 +94,32 @@ for k in range(5000):
     lam_mini_batch = train_lam_opt_batch[shuffle_index]
 
     # compute the lambda batch
-    pred_x_next_batch, pred_g_lam_batch = learner.predict_nextstate(x_mini_batch, u_mini_batch, curr_theta)
-
-    breakpoint()
+    pred_x_next_batch, pred_mu_batch = learner.predict_nextstate(x_mini_batch, u_mini_batch, curr_theta)
 
     # compute the gradient
-    dtheta, loss, dyn_loss, lcp_loss = \
-        learner.gradient_step(x_mini_batch, u_mini_batch, x_next_mini_batch, curr_theta, lam_phi_opt_mini_batch,
-                              second_order=False)
+    dtheta, loss = learner.gradient_step(x_mini_batch, u_mini_batch, x_next_mini_batch,
+                                         curr_theta, pred_x_next_batch, pred_mu_batch)
 
     # store and update
     loss_trace += [loss]
     theta_trace += [curr_theta]
     curr_theta = optimizier.step(curr_theta, dtheta)
-    # curr_theta = optimizier.step(curr_theta, dtheta_hessian)
 
     if k % 100 == 0:
         # on the prediction using the current learned lcs
-        pred_x_next_batch, pred_lam_batch = learner.dyn_prediction(train_x_batch, train_u_batch, curr_theta)
+        pred_x_next_batch, pred_mu_batch = learner.predict_nextstate(train_x_batch, train_u_batch, curr_theta)
 
         # compute the prediction error
         error_x_next_batch = pred_x_next_batch - train_x_next_batch
         relative_error = (la.norm(error_x_next_batch, axis=1) / (la.norm(train_x_next_batch, axis=1) + 0.0001)).mean()
 
         # compute the predicted mode statistics
-        pred_mode_list, pred_mode_indices = cartpole_class.plotModes(pred_lam_batch)
 
         # plot the learned mode
         pred_x = train_x_batch[:, plot_x_indx]
         pred_y = pred_x_next_batch[:, plot_y_indx]
         sc.set_offsets(np.c_[pred_x, pred_y])
-        sc.set_array(color_list[pred_mode_indices])
         sc2.set_offsets(np.c_[pred_x, pred_y])
-        sc2.set_array(color_list[pred_mode_indices])
         fig.canvas.draw_idle()
         plt.pause(0.1)
 
@@ -134,10 +127,7 @@ for k in range(5000):
             '| iter', k,
             '| loss:', loss,
             '| grad:', norm_2(dtheta),
-            '| dyn_loss:', dyn_loss,
-            '| lcp_loss:', lcp_loss,
             '| relative_prediction_error:', relative_error,
-            '| pred_mode_counts:', len(pred_mode_list),
         )
 
 # save

@@ -79,7 +79,7 @@ class cartpole_learner:
         self.C_fn = Function('C_fn', [self.theta], [self.C])
         self.lcp_offset_fn = Function('lcp_offset_fn', [self.theta], [self.lcp_offset])
 
-    def differetiable(self, gamma=1e0, epsilon=1e1):
+    def differetiable(self, gamma=1e2, epsilon=1e1):
 
         # define the dynamics loss
         self.x_next = SX.sym('x_next', self.n_state)
@@ -226,6 +226,9 @@ class QP_learner:
         else:
             self.B = DM(B)
 
+        self.cstr_offset = SX.sym('cstr_offset', self.n_state)
+        self.theta += [vec(self.cstr_offset)]
+
         self.theta = vcat(self.theta)
         self.n_theta = self.theta.numel()
 
@@ -238,14 +241,14 @@ class QP_learner:
         self.B_fn = Function('B_fn', [self.theta], [self.B])
         self.obj_offset_fn = Function('obj_offset', [self.theta], [self.obj_offset])
 
-    def differetiable(self, gamma=1e0, epsilon=1e1):
+    def differetiable(self):
 
         # forming qp problem
         self.pred_x_next = SX.sym('pred_x_next', self.n_state)
         self.obj = dot(self.pred_x_next, self.F @ self.pred_x_next) \
                    + dot(self.pred_x_next, self.D @ self.x + self.E @ self.u + self.obj_offset)
 
-        self.cstr = self.pred_x_next - self.A @ self.x - self.B @ self.u
+        self.cstr = self.pred_x_next - self.A @ self.x - self.B @ self.u - self.cstr_offset
         data_theta = vertcat(self.x, self.u, self.theta)
         quadprog = {'x': self.pred_x_next, 'f': self.obj, 'g': self.cstr, 'p': data_theta}
         opts = {'printLevel': 'none', }
@@ -269,7 +272,7 @@ class QP_learner:
         # compute the jacobian from lam to theta
         self.loss_fn = Function('loss_fn', [self.pred_x_next, self.x_next], [self.loss])
         self.dloss_fn = Function('dloss_fn', [self.x, self.u, self.theta, self.pred_x_next, self.mu, self.x_next],
-                                 [dloss])
+                                 [dloss.T])
 
         self.test_fn = Function('test_fn', [self.x, self.u, self.theta, self.pred_x_next, self.mu],
                                 [g])
@@ -286,31 +289,24 @@ class QP_learner:
         # compute the lam_phi solution
         sol_batch = self.inner_QPSolver(lbg=0.0, p=data_theta_batch.T)
         pred_x_next_batch = sol_batch['x'].full().T
-        pred_g_lam_batch = sol_batch['lam_g'].full().T
+        pred_mu_batch = sol_batch['lam_g'].full().T
 
-        # do some test
-        g_batchc = self.test_fn
+        return pred_x_next_batch, pred_mu_batch
 
-        return pred_x_next_batch, pred_g_lam_batch
-
-    def gradient_step(self, x_batch, u_batch, x_next_batch, theta_val, lam_phi_opt_batch, second_order=False):
+    def gradient_step(self, x_batch, u_batch, x_next_batch, theta_val, pred_x_next_batch, pred_mu_batch):
         batch_size = x_batch.shape[0]
-        data_batch = np.hstack((x_batch, u_batch, x_next_batch))
         theta_val_batch = np.tile(theta_val, (batch_size, 1))
 
         # compute the gradient value
-        dtheta_batch = self.dloss_fn(data_batch.T, theta_val_batch.T, lam_phi_opt_batch.T)
+        dtheta_batch = self.dloss_fn(x_batch.T, u_batch.T, theta_val_batch.T, pred_x_next_batch.T, pred_mu_batch.T,
+                                     x_next_batch.T)
         dtheta_mean = dtheta_batch.full().mean(axis=1)
 
         # compute the losses
-        loss_batch = self.loss_fn(data_batch.T, theta_val_batch.T, lam_phi_opt_batch.T)
-        dyn_loss_batch = self.dyn_loss_fn(data_batch.T, theta_val_batch.T, lam_phi_opt_batch.T)
-        lcp_loss_batch = self.lcp_loss_fn(data_batch.T, theta_val_batch.T, lam_phi_opt_batch.T)
+        loss_batch = self.loss_fn(pred_x_next_batch.T, x_next_batch.T)
         loss_mean = loss_batch.full().mean()
-        dyn_loss_mean = dyn_loss_batch.full().mean()
-        lcp_loss_mean = lcp_loss_batch.full().mean()
 
-        return dtheta_mean, loss_mean, dyn_loss_mean, lcp_loss_mean
+        return dtheta_mean, loss_mean
 
     def dyn_prediction(self, x_batch, u_batch, theta_val):
         self.differetiable()
