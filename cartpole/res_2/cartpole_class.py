@@ -18,7 +18,6 @@ class cartpole_learner:
 
         self.theta = []
 
-
         if A is None:
             self.A = SX.sym('A', self.n_state, self.n_state)
             self.theta += [vec(self.A)]
@@ -67,7 +66,6 @@ class cartpole_learner:
         else:
             self.lcp_offset = DM(lcp_offset)
 
-
         self.theta = vcat(self.theta)
         self.n_theta = self.theta.numel()
 
@@ -81,7 +79,7 @@ class cartpole_learner:
         self.C_fn = Function('C_fn', [self.theta], [self.C])
         self.lcp_offset_fn = Function('lcp_offset_fn', [self.theta], [self.lcp_offset])
 
-    def differetiable(self, gamma=1e-2, epsilon=1e3):
+    def differetiable(self, gamma=1e-3, epsilon=1e3):
 
         # define the dynamics loss
         self.x_next = SX.sym('x_next', self.n_state)
@@ -194,11 +192,23 @@ class cartpole_learner2:
 
         self.theta = []
 
+        # if lcp_offset is None:
+        #     self.lcp_offset = SX.sym('lcp_offset', self.n_lam)
+        #     self.theta += [vec(self.lcp_offset)]
+        # else:
+        #     self.lcp_offset = DM(lcp_offset)
+
+
         if lcp_offset is None:
-            self.lcp_offset = SX.sym('lcp_offset', self.n_lam)
-            self.theta += [vec(self.lcp_offset)]
+            lcp_offset_var = SX.sym('lcp_offset', self.n_lam)
+            self.theta += [vec(lcp_offset_var)]
         else:
-            self.lcp_offset = DM(lcp_offset)
+            lcp_offset_var = DM(lcp_offset)
+
+        self.lcp_offset=lcp_offset_var*lcp_offset_var
+
+
+
 
         if A is None:
             self.A = SX.sym('A', self.n_state, self.n_state)
@@ -255,7 +265,7 @@ class cartpole_learner2:
         self.C_fn = Function('C_fn', [self.theta], [self.C])
         self.lcp_offset_fn = Function('lcp_offset_fn', [self.theta], [self.lcp_offset])
 
-    def differetiable(self, gamma=1e2, epsilon=1e1):
+    def differetiable(self, gamma=1e-2, epsilon=1e0):
 
         # define the dynamics loss
         self.x_next = SX.sym('x_next', self.n_state)
@@ -270,8 +280,10 @@ class cartpole_learner2:
                                                              self.phi - self.dist)
 
         # total loss
-        loss = dyn_loss + lcp_loss / epsilon
-        # loss = (dyn_loss + lcp_loss / epsilon)* dot(self.x_next - self.x, self.x_next - self.x)
+        loss = dyn_loss + lcp_loss / epsilon - 0.1 * dot(self.lcp_offset, self.lcp_offset)
+        # - 0.0001 * dot(vec(self.D),vec(self.D))
+        # loss = dyn_loss * exp(
+        #     dot(self.x_next - self.x, self.x_next - self.x) -1* dot(self.u, self.u)) + lcp_loss / epsilon
 
         # establish the qp solver
         lam_phi = vertcat(self.lam, self.phi)
