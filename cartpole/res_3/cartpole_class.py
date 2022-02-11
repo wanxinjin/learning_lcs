@@ -304,6 +304,7 @@ class cartpole_learner_bilevel:
         # differentiate the linear regression with respect to the self.lam (note that this is an envelope theorem)
         self.dloss_dlam = jacobian(dyn_loss, self.lam)
 
+
         # define the lcp problem
         self.dist = self.D @ self.x + self.E @ self.u + self.F @ self.lam + self.lcp_offset
         data_theta_lcp = vertcat(self.x, self.u, self.theta_lcp)
@@ -318,7 +319,7 @@ class cartpole_learner_bilevel:
         dg_dthetalcp = jacobian(g, self.theta_lcp)
         dlam_dthetalcp = -inv(dg_dlam) @ dg_dthetalcp
         self.dthetalcp = self.dloss_dlam @ dlam_dthetalcp
-        self.dthetalcp_fn = Function('dthetalcp_fn', [data, self.theta_dyn, self.lam, self.theta_lcp], [self.dthetalcp])
+        self.dthetalcp_fn = Function('dthetalcp_fn', [data, self.theta_dyn, self.lam, self.theta_lcp], [self.dthetalcp.T])
         self.loss_fn = Function('loss_fn', [data, self.theta_dyn, self.lam], [dyn_loss])
 
     def compute_lambda(self, x_batch, u_batch, theta_lcp):
@@ -361,6 +362,8 @@ class cartpole_learner_bilevel:
         theta_dyn_opt_batch = np.tile(theta_dyn_opt, (batch_size, 1))
         theta_lcp_batch = np.tile(theta_lcp, (batch_size, 1))
         dthetalcp_batch = self.dthetalcp_fn(data.T, theta_dyn_opt_batch.T, lam_opt_batch.T, theta_lcp_batch.T)
+
+
         loss_batch = self.loss_fn(data.T, theta_dyn_opt_batch.T, lam_opt_batch.T)
         dthetalcp_mean = dthetalcp_batch.full().mean(axis=1)
         loss_mean = loss_batch.full().flatten().mean()

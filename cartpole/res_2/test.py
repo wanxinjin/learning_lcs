@@ -77,7 +77,11 @@ test_mode_list, test_mode_indices = cartpole_class.plotModes(test_lam_opt_batch)
 
 # ==============================   create the learner object    ========================================
 # ！！！！！！！！！！！！！！！！ make sure matching with line 60-63 in the train.py
-learner = cartpole_class.cartpole_learner2(n_state, n_control, n_lam=n_lam, stiffness=1)
+learner = cartpole_class.cartpole_learner2(n_state, n_control, n_lam=n_lam,
+                                           A=A,
+                                           B=B,
+                                           C=C,
+                                           stiffness=0.001)
 
 
 # ================================   do some anlaysis for the prediction    ======================================

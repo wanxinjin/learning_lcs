@@ -42,7 +42,10 @@ velocity_cart = 5 * np.random.uniform(-1, 1, size=(train_data_size, 1))
 position_pole = 0.3 * np.random.uniform(-1, 1, size=(train_data_size, 1))
 velocity_pole = 5 * np.random.uniform(-1, 1, size=(train_data_size, 1))
 train_x_batch = np.hstack((position_cart, position_pole, velocity_cart, velocity_pole))
+train_x_batch=train_x_batch+0.01*np.random.randn(*train_x_batch.shape)
 train_u_batch = np.random.uniform(-10, 10, size=(train_data_size, n_control))
+train_u_batch=train_u_batch+0.1*np.random.randn(*train_u_batch.shape)
+
 
 # train_x_batch = 0.35 * np.random.uniform(-1, 1, size=(train_data_size, n_state))
 # train_u_batch = 5 * np.random.uniform(-1, 1, size=(train_data_size, n_control))
@@ -89,25 +92,15 @@ learner = cartpole_class.cartpole_learner2(n_state, n_control, n_lam=n_lam,
                                            # A=A,
                                            # B=B,
                                            # C=C,
-                                           stiffness=1e-0)
+                                           # D=D,
+                                           stiffness=0.001)
 # print(learner.theta)
-true_theta = vertcat(vec(A), vec(B),
-                     vec(C),
-                     vec(D), vec(E), vec(G), vec(H), vec(lcp_offset)).full().flatten()
+true_theta = vertcat(
+    vec(A),
+    # vec(B),
+    # vec(C),
+    vec(D), vec(E), vec(G), vec(H), vec(lcp_offset)).full().flatten()
 # ================================   beginning the training process    ======================================
-# doing learning process
-# mag = 0.5
-# rand_A = A + mag * np.random.randn(*A.shape)
-# rand_B = B + mag * np.random.randn(*B.shape)
-# rand_C = C + mag * np.random.randn(*C.shape)
-# rand_D = D + mag * np.random.randn(*D.shape)
-# rand_E = E + mag * np.random.randn(*E.shape)
-# rand_G = G + 0 * np.random.randn(*G.shape)
-# rand_H = H + 0 * np.random.randn(*H.shape)
-# rand_lcp_offset = lcp_offset + 0 * np.random.randn(*lcp_offset.shape)
-# curr_theta = vertcat(vec(rand_A), vec(rand_B), vec(rand_C), vec(rand_D), vec(rand_E), vec(rand_G), vec(rand_H),
-#                      vec(rand_lcp_offset)).full().flatten()
-
 curr_theta = 0.5 * np.random.randn(learner.n_theta)
 # curr_theta = 0*true_theta + 0.5* np.random.randn(learner.n_theta)
 # print('initial parameter relative error:', norm_2(curr_theta - true_theta) / norm_2(true_theta))
@@ -115,8 +108,8 @@ mini_batch_size = 200
 loss_trace = []
 theta_trace = []
 optimizier = opt.Adam()
-optimizier.learning_rate = 1e-2
-epsilon = np.linspace(1e1, 1e-1, 5000)
+optimizier.learning_rate = 1e-3
+# epsilon = np.linspace(1e1, 1e-1, 5000)
 # epsilon = 1
 for k in range(5000):
     # mini batch dataset
@@ -127,14 +120,18 @@ for k in range(5000):
     lam_mini_batch = train_lam_opt_batch[shuffle_index]
 
     # compute the lambda batch
-    learner.differetiable(epsilon=epsilon[k])
+    # learner.differetiable(epsilon=epsilon[k])
     lam_phi_opt_mini_batch, loss_opt_batch = learner.compute_lambda(x_mini_batch, u_mini_batch, x_next_mini_batch,
                                                                     curr_theta)
 
-    # compute the gradient
+    # compute the gradient only for matrix compute the A B C matrix
     dtheta, loss, dyn_loss, lcp_loss, dtheta_hessian = \
         learner.gradient_step(x_mini_batch, u_mini_batch, x_next_mini_batch, curr_theta, lam_phi_opt_mini_batch,
                               second_order=False)
+
+
+
+
 
     # store and update
     loss_trace += [loss]
@@ -165,14 +162,14 @@ for k in range(5000):
         plt.pause(0.1)
 
         print(
-            '| iter', k,
+             k,
             '| loss:', loss,
             '| grad:', norm_2(dtheta),
             '| dyn:', dyn_loss,
             '| lcp:', lcp_loss,
             '| RPE:', relative_error,
             '| PMC:', len(pred_mode_list),
-            '| epsilon:', epsilon[k]
+            # '| epsilon:', epsilon[k]
         )
 
 # save

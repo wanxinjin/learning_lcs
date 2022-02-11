@@ -35,7 +35,7 @@ lcp_offset = lcs_mats['lcp_offset']
 # create the data generator
 data_generator = cartpole_class.cartpole_learner(n_state, n_control, n_lam,
                                                  A, B, C, D, E, G, H, lcp_offset, stiffness=0)
-train_data_size = 2000
+train_data_size = 500
 # sample
 position_cart = 0.35 * np.random.uniform(-1, 1, size=(train_data_size, 1))
 velocity_cart = 5 * np.random.uniform(-1, 1, size=(train_data_size, 1))
@@ -85,17 +85,17 @@ sc2 = ax.scatter(pred_x, pred_y, s=30, marker="+", cmap='paried')
 plt.draw()
 
 # ==============================   create the learner object    ========================================
-learner = cartpole_class.cartpole_learner_bilevel(n_state, n_control, n_lam=n_lam, stiffness=0)
+learner = cartpole_class.cartpole_learner_bilevel(n_state, n_control, n_lam=n_lam, stiffness=10)
 true_theta_lcp = vertcat(vec(D), vec(E), vec(G), vec(H), vec(lcp_offset)).full().flatten()
 # ================================   beginning the training process    ======================================
 
-# curr_theta_lcp = 1 * np.random.randn(learner.n_theta_lcp)
-curr_theta_lcp = 1.*true_theta_lcp + 1.* np.random.randn(learner.n_theta_lcp)
-mini_batch_size = 200
+curr_theta_lcp = 1 * np.random.randn(learner.n_theta_lcp)
+# curr_theta_lcp = 1.*true_theta_lcp + 0.* np.random.randn(learner.n_theta_lcp)
+mini_batch_size = 500
 loss_trace = []
 theta_lcp_trace = []
 optimizier = opt.Adam()
-optimizier.learning_rate = 1e-2
+optimizier.learning_rate = 1e-1
 for k in range(5000):
     # mini batch dataset
     shuffle_index = np.random.permutation(train_data_size)[0:mini_batch_size]
@@ -111,9 +111,11 @@ for k in range(5000):
     theta_dyn_opt, dyn_loss = learner.dyn_regression(x_mini_batch, u_mini_batch, x_next_mini_batch, lam_opt_mini_batch)
 
     # compute the gradient
-
     dtheta_lcp, loss = learner.compute_gradient(x_mini_batch, u_mini_batch, x_next_mini_batch,
                                                 theta_dyn_opt, lam_opt_mini_batch, curr_theta_lcp)
+
+
+
 
     # store and update
     loss_trace += [loss]
@@ -126,8 +128,9 @@ for k in range(5000):
         print(
             '| iter', k,
             '| loss:', loss,
-            '| dyn_loss:', dyn_loss,
             '| lcp_grad:', norm_2(dtheta_lcp),
+            '| dim:', dtheta_lcp.shape
+
         )
 
 # save
