@@ -3,7 +3,6 @@ import lcs.optim as opt
 import numpy.linalg as la
 from casadi import *
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 
 
 def print(*args):
@@ -34,17 +33,8 @@ lcp_offset = lcs_mats['lcp_offset']
 data_generator = cartpole_class.cartpole_learner(n_state, n_control, n_lam,
                                                  A, B, C, D, E, G, H, lcp_offset, stiffness=0)
 train_data_size = 2000
-
-# sample
-position_cart = 0.35 * np.random.uniform(-1, 1, size=(train_data_size, 1))
-velocity_cart = 5 * np.random.uniform(-1, 1, size=(train_data_size, 1))
-position_pole = 0.3 * np.random.uniform(-1, 1, size=(train_data_size, 1))
-velocity_pole = 5 * np.random.uniform(-1, 1, size=(train_data_size, 1))
-train_x_batch = np.hstack((position_cart, position_pole, velocity_cart, velocity_pole))
-train_u_batch = np.random.uniform(-10, 10, size=(train_data_size, n_control))
-
-# train_x_batch = 0.35 * np.random.uniform(-1, 1, size=(train_data_size, n_state))
-# train_u_batch = 5 * np.random.uniform(-1, 1, size=(train_data_size, n_control))
+train_x_batch = 1 * np.random.uniform(-1, 1, size=(train_data_size, n_state))
+train_u_batch = 1 * np.random.uniform(-1, 1, size=(train_data_size, n_control))
 train_x_next_batch, train_lam_opt_batch = data_generator.dyn_prediction(train_x_batch, train_u_batch, theta_val=[])
 train_mode_list, train_mode_frequency_list = cartpole_class.statiModes(train_lam_opt_batch)
 print('number of modes in the training data:', train_mode_frequency_list.size)
@@ -54,8 +44,8 @@ train_mode_list, train_mode_indices = cartpole_class.plotModes(train_lam_opt_bat
 
 # =============== plot the training data, each color for each mode  ======================================
 # plot dimension index
-plot_x_indx = 0
-plot_y_indx = 0
+plot_x_indx = 2
+plot_y_indx = 2
 
 plt.figure()
 plt.title('True modes marked in (o)')
@@ -83,19 +73,17 @@ sc2 = ax.scatter(pred_x, pred_y, s=30, marker="+", cmap='paried')
 plt.draw()
 
 # ==============================   create the learner object    ========================================
-learner = cartpole_class.cartpole_learner(n_state, n_control, n_lam=n_lam, stiffness=0)
-# print(learner.theta)
-true_theta = vertcat(vec(A), vec(B), vec(C), vec(D), vec(E), vec(G), vec(H), vec(lcp_offset)).full().flatten()
+learner = cartpole_class.QP_learner(n_state, n_control, stiffness=0.5)
+
 # ================================   beginning the training process    ======================================
 # doing learning process
-# curr_theta = 0.1 * np.random.randn(learner.n_theta)
-curr_theta = true_theta + 0.09 * np.random.randn(learner.n_theta)
-print('initial parameter relative error:', norm_2(curr_theta-true_theta)/norm_2(true_theta))
-mini_batch_size = 300
+curr_theta = 0.1 * np.random.randn(learner.n_theta)
+# curr_theta = true_theta + 2 * np.random.randn(learner.n_theta)
+mini_batch_size = 200
 loss_trace = []
 theta_trace = []
 optimizier = opt.Adam()
-optimizier.learning_rate = 1e-3
+optimizier.learning_rate = 1e-2
 for k in range(5000):
     # mini batch dataset
     shuffle_index = np.random.permutation(train_data_size)[0:mini_batch_size]
@@ -105,38 +93,32 @@ for k in range(5000):
     lam_mini_batch = train_lam_opt_batch[shuffle_index]
 
     # compute the lambda batch
-    lam_phi_opt_mini_batch, loss_opt_batch = learner.compute_lambda(x_mini_batch, u_mini_batch, x_next_mini_batch,
-                                                                    curr_theta)
+    pred_x_next_batch, pred_mu_batch = learner.predict_nextstate(x_mini_batch, u_mini_batch, curr_theta)
 
     # compute the gradient
-    dtheta, loss, dyn_loss, lcp_loss = \
-        learner.gradient_step(x_mini_batch, u_mini_batch, x_next_mini_batch, curr_theta, lam_phi_opt_mini_batch,
-                              second_order=False)
+    dtheta, loss = learner.gradient_step(x_mini_batch, u_mini_batch, x_next_mini_batch,
+                                         curr_theta, pred_x_next_batch, pred_mu_batch)
 
     # store and update
     loss_trace += [loss]
     theta_trace += [curr_theta]
     curr_theta = optimizier.step(curr_theta, dtheta)
-    # curr_theta = optimizier.step(curr_theta, dtheta_hessian)
 
     if k % 100 == 0:
         # on the prediction using the current learned lcs
-        pred_x_next_batch, pred_lam_batch = learner.dyn_prediction(train_x_batch, train_u_batch, curr_theta)
+        pred_x_next_batch, pred_mu_batch = learner.predict_nextstate(train_x_batch, train_u_batch, curr_theta)
 
         # compute the prediction error
         error_x_next_batch = pred_x_next_batch - train_x_next_batch
         relative_error = (la.norm(error_x_next_batch, axis=1) / (la.norm(train_x_next_batch, axis=1) + 0.0001)).mean()
 
         # compute the predicted mode statistics
-        pred_mode_list, pred_mode_indices = cartpole_class.plotModes(pred_lam_batch)
 
         # plot the learned mode
         pred_x = train_x_batch[:, plot_x_indx]
         pred_y = pred_x_next_batch[:, plot_y_indx]
         sc.set_offsets(np.c_[pred_x, pred_y])
-        sc.set_array(color_list[pred_mode_indices])
         sc2.set_offsets(np.c_[pred_x, pred_y])
-        sc2.set_array(color_list[pred_mode_indices])
         fig.canvas.draw_idle()
         plt.pause(0.1)
 
@@ -144,10 +126,7 @@ for k in range(5000):
             '| iter', k,
             '| loss:', loss,
             '| grad:', norm_2(dtheta),
-            '| dyn:', dyn_loss,
-            '| lcp:', lcp_loss,
-            '| RPE:', relative_error,
-            '| PMC:', len(pred_mode_list),
+            '| relative_prediction_error:', relative_error,
         )
 
 # save

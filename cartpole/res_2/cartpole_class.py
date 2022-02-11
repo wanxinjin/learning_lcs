@@ -79,7 +79,7 @@ class cartpole_learner:
         self.C_fn = Function('C_fn', [self.theta], [self.C])
         self.lcp_offset_fn = Function('lcp_offset_fn', [self.theta], [self.lcp_offset])
 
-    def differetiable(self, gamma=1e-3, epsilon=1e3):
+    def differetiable(self, gamma=1e-3, epsilon=1e1):
 
         # define the dynamics loss
         self.x_next = SX.sym('x_next', self.n_state)
@@ -112,7 +112,21 @@ class cartpole_learner:
         self.lcp_loss_fn = Function('lcp_loss_fn', [data, self.theta, lam_phi], [lcp_loss])
 
         # compute the second order derivative
-        # TBD
+        grad_loss = jacobian(loss, lam_phi).T
+        L = diag(lam_phi) @ grad_loss
+        self.L_fn = Function('L_fn', [data, self.theta, lam_phi], [L])  # this is just for testing
+        # compute the gradient of lam_phi_opt with respect to theta
+        dL_dsol = jacobian(L, lam_phi)
+        dL_dtheta = jacobian(L, self.theta)
+        dsol_dtheta = -inv(dL_dsol) @ dL_dtheta
+        self.dsol_dtheta_fn = Function('dsol_dtheta_fn', [data, self.theta, lam_phi], [dsol_dtheta])
+        # this is just for testing
+        dloss2 = jacobian(loss, self.theta) + jacobian(loss, lam_phi) @ dsol_dtheta
+        self.dloss2_fn = Function('dloss2_fn', [data, self.theta, lam_phi], [dloss2.T])
+        # compute the second order derivative
+        dloss_dtheta = jacobian(loss, self.theta).T
+        ddloss = jacobian(dloss_dtheta, self.theta) + jacobian(dloss_dtheta, lam_phi) @ dsol_dtheta
+        self.ddloss_fn = Function('ddloss_fn', [data, self.theta, lam_phi], [ddloss])
 
     def compute_lambda(self, x_batch, u_batch, x_next_batch, theta_val):
         self.differetiable()
@@ -147,7 +161,23 @@ class cartpole_learner:
         dyn_loss_mean = dyn_loss_batch.full().mean()
         lcp_loss_mean = lcp_loss_batch.full().mean()
 
-        return dtheta_mean, loss_mean, dyn_loss_mean, lcp_loss_mean
+        dtheta_hessian = dtheta_mean
+
+        if second_order is True:
+            hessian_batch = self.ddloss_fn(data_batch.T, theta_val_batch.T, lam_phi_opt_batch.T)
+            # compute the mean hessian
+            hessian_sum = 0
+            for i in range(batch_size):
+                hessian_i = hessian_batch[:, i * self.n_theta:(i + 1) * self.n_theta]
+                hessian_sum += hessian_i
+            hessian_mean = hessian_sum / batch_size
+            damping_factor = 1
+            u, s, vh = np.linalg.svd(hessian_mean)
+            s = s + damping_factor
+            damped_hessian = u @ np.diag(s) @ vh
+            dtheta_hessian = (inv(damped_hessian) @ DM(dtheta_mean)).full().flatten()
+
+        return dtheta_mean, loss_mean, dyn_loss_mean, lcp_loss_mean, dtheta_hessian
 
     def dyn_prediction(self, x_batch, u_batch, theta_val):
         self.differetiable()
@@ -192,24 +222,6 @@ class cartpole_learner2:
 
         self.theta = []
 
-        # if lcp_offset is None:
-        #     self.lcp_offset = SX.sym('lcp_offset', self.n_lam)
-        #     self.theta += [vec(self.lcp_offset)]
-        # else:
-        #     self.lcp_offset = DM(lcp_offset)
-
-
-        if lcp_offset is None:
-            lcp_offset_var = SX.sym('lcp_offset', self.n_lam)
-            self.theta += [vec(lcp_offset_var)]
-        else:
-            lcp_offset_var = DM(lcp_offset)
-
-        self.lcp_offset=lcp_offset_var*lcp_offset_var
-
-
-
-
         if A is None:
             self.A = SX.sym('A', self.n_state, self.n_state)
             self.theta += [vec(self.A)]
@@ -252,6 +264,12 @@ class cartpole_learner2:
         else:
             self.H = DM(H)
 
+        if lcp_offset is None:
+            self.lcp_offset = SX.sym('lcp_offset', self.n_lam)
+            self.theta += [vec(self.lcp_offset)]
+        else:
+            self.lcp_offset = DM(lcp_offset)
+
         self.theta = vcat(self.theta)
         self.n_theta = self.theta.numel()
 
@@ -265,13 +283,14 @@ class cartpole_learner2:
         self.C_fn = Function('C_fn', [self.theta], [self.C])
         self.lcp_offset_fn = Function('lcp_offset_fn', [self.theta], [self.lcp_offset])
 
-    def differetiable(self, gamma=1e-2, epsilon=1e0):
+    def differetiable(self, gamma=1e-3, epsilon=1e6):
 
         # define the dynamics loss
         self.x_next = SX.sym('x_next', self.n_state)
         data = vertcat(self.x, self.u, self.x_next)
         self.dyn = self.A @ self.x + self.B @ self.u + self.C @ self.lam
-        dyn_loss = dot(self.dyn - self.x_next, self.dyn - self.x_next)
+        matW = diag([1, 1, 10, 10])
+        dyn_loss = dot(self.dyn - self.x_next, matW @ (self.dyn - self.x_next))
 
         # lcp loss
         self.dist = self.D @ self.x + self.E @ self.u + self.F @ self.lam + self.lcp_offset
@@ -280,10 +299,9 @@ class cartpole_learner2:
                                                              self.phi - self.dist)
 
         # total loss
-        loss = dyn_loss + lcp_loss / epsilon - 0.1 * dot(self.lcp_offset, self.lcp_offset)
-        # - 0.0001 * dot(vec(self.D),vec(self.D))
-        # loss = dyn_loss * exp(
-        #     dot(self.x_next - self.x, self.x_next - self.x) -1* dot(self.u, self.u)) + lcp_loss / epsilon
+        loss = dyn_loss + lcp_loss / epsilon
+        # loss = dot(self.dyn[2:4] - self.x_next[2:4], self.dyn[2:4] - self.x_next[2:4]) + lcp_loss / epsilon
+        # loss = (dyn_loss + lcp_loss / epsilon) / (0.5+dot(self.x_next, self.x_next))
 
         # establish the qp solver
         lam_phi = vertcat(self.lam, self.phi)
@@ -299,7 +317,21 @@ class cartpole_learner2:
         self.lcp_loss_fn = Function('lcp_loss_fn', [data, self.theta, lam_phi], [lcp_loss])
 
         # compute the second order derivative
-        # TBD
+        grad_loss = jacobian(loss, lam_phi).T
+        L = diag(lam_phi) @ grad_loss
+        self.L_fn = Function('L_fn', [data, self.theta, lam_phi], [L])  # this is just for testing
+        # compute the gradient of lam_phi_opt with respect to theta
+        dL_dsol = jacobian(L, lam_phi)
+        dL_dtheta = jacobian(L, self.theta)
+        dsol_dtheta = -inv(dL_dsol) @ dL_dtheta
+        self.dsol_dtheta_fn = Function('dsol_dtheta_fn', [data, self.theta, lam_phi], [dsol_dtheta])
+        # this is just for testing
+        dloss2 = jacobian(loss, self.theta) + jacobian(loss, lam_phi) @ dsol_dtheta
+        self.dloss2_fn = Function('dloss2_fn', [data, self.theta, lam_phi], [dloss2.T])
+        # compute the second order derivative
+        dloss_dtheta = jacobian(loss, self.theta).T
+        ddloss = jacobian(dloss_dtheta, self.theta) + jacobian(dloss_dtheta, lam_phi) @ dsol_dtheta
+        self.ddloss_fn = Function('ddloss_fn', [data, self.theta, lam_phi], [ddloss])
 
     def compute_lambda(self, x_batch, u_batch, x_next_batch, theta_val):
         self.differetiable()
@@ -334,7 +366,23 @@ class cartpole_learner2:
         dyn_loss_mean = dyn_loss_batch.full().mean()
         lcp_loss_mean = lcp_loss_batch.full().mean()
 
-        return dtheta_mean, loss_mean, dyn_loss_mean, lcp_loss_mean
+        dtheta_hessian = dtheta_mean
+
+        if second_order is True:
+            hessian_batch = self.ddloss_fn(data_batch.T, theta_val_batch.T, lam_phi_opt_batch.T)
+            # compute the mean hessian
+            hessian_sum = 0
+            for i in range(batch_size):
+                hessian_i = hessian_batch[:, i * self.n_theta:(i + 1) * self.n_theta]
+                hessian_sum += hessian_i
+            hessian_mean = hessian_sum / batch_size
+            damping_factor = 1
+            u, s, vh = np.linalg.svd(hessian_mean)
+            s = s + damping_factor
+            damped_hessian = u @ np.diag(s) @ vh
+            dtheta_hessian = (inv(damped_hessian) @ DM(dtheta_mean)).full().flatten()
+
+        return dtheta_mean, loss_mean, dyn_loss_mean, lcp_loss_mean, dtheta_hessian
 
     def dyn_prediction(self, x_batch, u_batch, theta_val):
         self.differetiable()

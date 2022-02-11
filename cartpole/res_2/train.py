@@ -1,3 +1,5 @@
+import numpy as np
+
 import cartpole_class
 import lcs.optim as opt
 import numpy.linalg as la
@@ -33,7 +35,7 @@ lcp_offset = lcs_mats['lcp_offset']
 # create the data generator
 data_generator = cartpole_class.cartpole_learner(n_state, n_control, n_lam,
                                                  A, B, C, D, E, G, H, lcp_offset, stiffness=0)
-train_data_size = 5000
+train_data_size = 2000
 # sample
 position_cart = 0.35 * np.random.uniform(-1, 1, size=(train_data_size, 1))
 velocity_cart = 5 * np.random.uniform(-1, 1, size=(train_data_size, 1))
@@ -83,9 +85,15 @@ sc2 = ax.scatter(pred_x, pred_y, s=30, marker="+", cmap='paried')
 plt.draw()
 
 # ==============================   create the learner object    ========================================
-learner = cartpole_class.cartpole_learner(n_state, n_control, n_lam=n_lam, stiffness=1)
+learner = cartpole_class.cartpole_learner2(n_state, n_control, n_lam=n_lam,
+                                           # A=A,
+                                           # B=B,
+                                           # C=C,
+                                           stiffness=1e-0)
 # print(learner.theta)
-true_theta = vertcat(vec(A), vec(B), vec(C), vec(D), vec(E), vec(G), vec(H), vec(lcp_offset)).full().flatten()
+true_theta = vertcat(vec(A), vec(B),
+                     vec(C),
+                     vec(D), vec(E), vec(G), vec(H), vec(lcp_offset)).full().flatten()
 # ================================   beginning the training process    ======================================
 # doing learning process
 # mag = 0.5
@@ -100,14 +108,16 @@ true_theta = vertcat(vec(A), vec(B), vec(C), vec(D), vec(E), vec(G), vec(H), vec
 # curr_theta = vertcat(vec(rand_A), vec(rand_B), vec(rand_C), vec(rand_D), vec(rand_E), vec(rand_G), vec(rand_H),
 #                      vec(rand_lcp_offset)).full().flatten()
 
-curr_theta = 0.1 * np.random.randn(learner.n_theta)
-# curr_theta = true_theta + 0.5 * np.random.randn(learner.n_theta)
-print('initial parameter relative error:', norm_2(curr_theta - true_theta) / norm_2(true_theta))
-mini_batch_size = 300
+curr_theta = 0.5 * np.random.randn(learner.n_theta)
+# curr_theta = 0*true_theta + 0.5* np.random.randn(learner.n_theta)
+# print('initial parameter relative error:', norm_2(curr_theta - true_theta) / norm_2(true_theta))
+mini_batch_size = 200
 loss_trace = []
 theta_trace = []
 optimizier = opt.Adam()
-optimizier.learning_rate = 1e-3
+optimizier.learning_rate = 1e-2
+epsilon = np.linspace(1e1, 1e-1, 5000)
+# epsilon = 1
 for k in range(5000):
     # mini batch dataset
     shuffle_index = np.random.permutation(train_data_size)[0:mini_batch_size]
@@ -117,19 +127,21 @@ for k in range(5000):
     lam_mini_batch = train_lam_opt_batch[shuffle_index]
 
     # compute the lambda batch
+    learner.differetiable(epsilon=epsilon[k])
     lam_phi_opt_mini_batch, loss_opt_batch = learner.compute_lambda(x_mini_batch, u_mini_batch, x_next_mini_batch,
                                                                     curr_theta)
 
     # compute the gradient
-    dtheta, loss, dyn_loss, lcp_loss = \
+    dtheta, loss, dyn_loss, lcp_loss, dtheta_hessian = \
         learner.gradient_step(x_mini_batch, u_mini_batch, x_next_mini_batch, curr_theta, lam_phi_opt_mini_batch,
                               second_order=False)
 
     # store and update
     loss_trace += [loss]
     theta_trace += [curr_theta]
-    curr_theta = optimizier.step(curr_theta, dtheta)
-    # curr_theta = optimizier.step(curr_theta, dtheta_hessian)
+    # curr_theta=curr_theta-1e-3*dtheta
+    # curr_theta = optimizier.step(curr_theta, dtheta)
+    curr_theta = optimizier.step(curr_theta, dtheta_hessian)
 
     if k % 100 == 0:
         # on the prediction using the current learned lcs
@@ -160,6 +172,7 @@ for k in range(5000):
             '| lcp:', lcp_loss,
             '| RPE:', relative_error,
             '| PMC:', len(pred_mode_list),
+            '| epsilon:', epsilon[k]
         )
 
 # save
