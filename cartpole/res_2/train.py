@@ -87,7 +87,7 @@ learner = cartpole_class.cartpole_learner2(n_state, n_control, n_lam=n_lam,
                                           # A=A,
                                           # H=H,
                                           # C=C,
-                                          stiffness=0.0)
+                                          stiffness=0.001)
 # print(learner.theta)
 true_theta = vertcat(
     vec(A),
