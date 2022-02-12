@@ -87,7 +87,7 @@ learner = cartpole_class.cartpole_learner2(n_state, n_control, n_lam=n_lam,
                                           # A=A,
                                           # H=H,
                                           # C=C,
-                                          stiffness=0.0)
+                                          stiffness=0.01)
 # print(learner.theta)
 true_theta = vertcat(
     vec(A),
@@ -98,7 +98,7 @@ true_theta = vertcat(
 # doing learning process
 curr_theta = 0.1 * np.random.randn(learner.n_theta)
 # curr_theta = true_theta + 0.5 * np.random.randn(learner.n_theta)
-mini_batch_size = 300
+mini_batch_size = 200
 loss_trace = []
 theta_trace = []
 optimizier = opt.Adam()
