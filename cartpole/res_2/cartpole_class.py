@@ -79,7 +79,7 @@ class cartpole_learner:
         self.C_fn = Function('C_fn', [self.theta], [self.C])
         self.lcp_offset_fn = Function('lcp_offset_fn', [self.theta], [self.lcp_offset])
 
-    def differetiable(self, gamma=1e-3, epsilon=1e1):
+    def differetiable(self, gamma=1e-3, epsilon=1e5):
 
         # define the dynamics loss
         self.x_next = SX.sym('x_next', self.n_state)
@@ -129,7 +129,6 @@ class cartpole_learner:
         self.ddloss_fn = Function('ddloss_fn', [data, self.theta, lam_phi], [ddloss])
 
     def compute_lambda(self, x_batch, u_batch, x_next_batch, theta_val):
-        self.differetiable()
 
         # prepare the data
         batch_size = x_batch.shape[0]
@@ -210,7 +209,7 @@ class cartpole_learner:
 
 class cartpole_learner2:
     def __init__(self, n_state, n_control, n_lam,
-                 A=None, B=None, C=None, D=None, E=None, F=None, lcp_offset=None,
+                 A=None, B=None, C=None, D=None, E=None, G=None, H=None, lcp_offset=None,
                  stiffness=0.):
         self.n_lam = n_lam
         self.n_state = n_state
@@ -252,11 +251,17 @@ class cartpole_learner2:
         else:
             self.E = DM(E)
 
-        if F is None:
-            self.F = SX.sym('F', self.n_lam, self.n_lam)
-            self.theta += [vec(self.F)]
+        if G is None:
+            self.G = SX.sym('G', self.n_lam, self.n_lam)
+            self.theta += [vec(self.G)]
         else:
-            self.F = DM(F)
+            self.G = DM(G)
+
+        if H is None:
+            self.H = SX.sym('H', self.n_lam, self.n_lam)
+            self.theta += [vec(self.H)]
+        else:
+            self.H = DM(H)
 
         if lcp_offset is None:
             self.lcp_offset = SX.sym('lcp_offset', self.n_lam)
@@ -267,6 +272,7 @@ class cartpole_learner2:
         self.theta = vcat(self.theta)
         self.n_theta = self.theta.numel()
 
+        self.F = stiffness * np.eye(self.n_lam) + self.G @ self.G.T + self.H - self.H.T
         self.F_fn = Function('F_fn', [self.theta], [self.F])
         self.D_fn = Function('D_fn', [self.theta], [self.D])
         self.E_fn = Function('E_fn', [self.theta], [self.E])
@@ -276,7 +282,7 @@ class cartpole_learner2:
         self.C_fn = Function('C_fn', [self.theta], [self.C])
         self.lcp_offset_fn = Function('lcp_offset_fn', [self.theta], [self.lcp_offset])
 
-    def differetiable(self, gamma=1e-3, epsilon=1e1):
+    def differetiable(self, gamma=1e-3, epsilon=1e3):
 
         # define the dynamics loss
         self.x_next = SX.sym('x_next', self.n_state)
@@ -292,6 +298,8 @@ class cartpole_learner2:
 
         # total loss
         loss = dyn_loss + lcp_loss / epsilon
+        # loss = dot(self.dyn[2:4] - self.x_next[2:4], self.dyn[2:4] - self.x_next[2:4]) + lcp_loss / epsilon
+        # loss = (dyn_loss + lcp_loss / epsilon) / (0.5+dot(self.x_next, self.x_next))
 
         # establish the qp solver
         lam_phi = vertcat(self.lam, self.phi)
@@ -324,7 +332,6 @@ class cartpole_learner2:
         self.ddloss_fn = Function('ddloss_fn', [data, self.theta, lam_phi], [ddloss])
 
     def compute_lambda(self, x_batch, u_batch, x_next_batch, theta_val):
-        self.differetiable()
 
         # prepare the data
         batch_size = x_batch.shape[0]
@@ -339,33 +346,10 @@ class cartpole_learner2:
 
         return lam_phi_opt_batch, loss_opt_batch
 
-    def compute_mats(self, x_batch, u_batch, x_next_batch, theta_val, lam_phi_opt_batch):
-
+    def gradient_step(self, x_batch, u_batch, x_next_batch, theta_val, lam_phi_opt_batch, second_order=False):
         batch_size = x_batch.shape[0]
         data_batch = np.hstack((x_batch, u_batch, x_next_batch))
-
-
-
-
-        # prepare the data
-        batch_size = x_batch.shape[0]
-        aug_x_batch = np.kron(x_batch, np.eye(self.n_state))
-        aug_u_batch = np.kron(u_batch, np.eye(self.n_state))
-        aug_lam_opt_batch = np.kron(lam_opt_batch, np.eye(self.n_state))
-        aug_input = np.hstack((aug_x_batch, aug_u_batch, aug_lam_opt_batch))
-
-        aug_output = x_next_batch.flatten().reshape((-1, 1))
-        theta_dyn_opt = inv(aug_input.T @ aug_input) @ aug_input.T @ aug_output
-
-        error = aug_output - aug_input @ theta_dyn_opt
-        dyn_loss = dot(error, error)
-        dyn_loss = dyn_loss / float(batch_size)
-
-
-
-
-
-
+        theta_val_batch = np.tile(theta_val, (batch_size, 1))
 
         # compute the gradient value
         dtheta_batch = self.dloss_fn(data_batch.T, theta_val_batch.T, lam_phi_opt_batch.T)
@@ -425,22 +409,7 @@ class cartpole_learner2:
 
         return x_next_batch, lam_opt_batch
 
-    def dyn_regression(self, x_batch, u_batch, x_next_batch, lam_opt_batch):
-        # prepare the data
-        batch_size = x_batch.shape[0]
-        aug_x_batch = np.kron(x_batch, np.eye(self.n_state))
-        aug_u_batch = np.kron(u_batch, np.eye(self.n_state))
-        aug_lam_opt_batch = np.kron(lam_opt_batch, np.eye(self.n_state))
-        aug_input = np.hstack((aug_x_batch, aug_u_batch, aug_lam_opt_batch))
 
-        aug_output = x_next_batch.flatten().reshape((-1, 1))
-        theta_dyn_opt = inv(aug_input.T @ aug_input) @ aug_input.T @ aug_output
-
-        error = aug_output - aug_input @ theta_dyn_opt
-        dyn_loss = dot(error, error)
-        dyn_loss = dyn_loss / float(batch_size)
-
-        return theta_dyn_opt.full().flatten(), dyn_loss
 
 
 class QP_learner:
