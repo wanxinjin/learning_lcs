@@ -1,3 +1,5 @@
+import numpy as np
+
 import cartpole_class
 import lcs.optim as opt
 import numpy.linalg as la
@@ -42,6 +44,8 @@ position_pole = .3 * np.random.uniform(-1, 1, size=(train_data_size, 1))
 velocity_pole = 5 * np.random.uniform(-1, 1, size=(train_data_size, 1))
 train_x_batch = np.hstack((position_cart, position_pole, velocity_cart, velocity_pole))
 train_u_batch = np.random.uniform(-10, 10, size=(train_data_size, n_control))
+train_x_batch = train_x_batch + 0.01 * np.random.randn(*train_x_batch.shape)
+train_u_batch = train_u_batch + 0.1 * np.random.randn(*train_u_batch.shape)
 
 # train_x_batch = 0.35 * np.random.uniform(-1, 1, size=(train_data_size, n_state))
 # train_u_batch = 5 * np.random.uniform(-1, 1, size=(train_data_size, n_control))
@@ -84,10 +88,10 @@ plt.draw()
 
 # ==============================   create the learner object    ========================================
 learner = cartpole_class.cartpole_learner2(n_state, n_control, n_lam=n_lam,
-                                          # A=A,
-                                          # H=H,
-                                          # C=C,
-                                          stiffness=0.01)
+                                           # A=A,
+                                           # H=H,
+                                           # C=C,
+                                           stiffness=0.001)
 # print(learner.theta)
 true_theta = vertcat(
     vec(A),
@@ -98,12 +102,12 @@ true_theta = vertcat(
 # doing learning process
 curr_theta = 0.1 * np.random.randn(learner.n_theta)
 # curr_theta = true_theta + 0.5 * np.random.randn(learner.n_theta)
-mini_batch_size = 200
+mini_batch_size = 300
 loss_trace = []
 theta_trace = []
 optimizier = opt.Adam()
 optimizier.learning_rate = 1e-2
-epsilon = np.logspace(2, -2, 5000)
+epsilon = np.logspace(3, -2, 5000)
 for k in range(5000):
     # mini batch dataset
     shuffle_index = np.random.permutation(train_data_size)[0:mini_batch_size]
@@ -152,7 +156,7 @@ for k in range(5000):
         print(
             k,
             '| loss:', loss,
-            '| loss:', dyn_loss + lcp_loss/epsilon[k],
+            '| loss:', dyn_loss + lcp_loss / epsilon[k],
             '| grad:', norm_2(dtheta),
             '| dyn:', dyn_loss,
             '| lcp:', lcp_loss,

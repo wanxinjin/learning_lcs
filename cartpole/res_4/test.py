@@ -59,7 +59,7 @@ plt.show()
 # ==============================   generate the testing data    ========================================
 # ！！！！！！！！！！！！！！！！make sure matching with line 27-33 in the train.py
 data_generator = cartpole_class.cartpole_learner(n_state, n_control, n_lam,
-                                                 A, B, C, D, E, G, H, lcp_offset, stiffness=0.01)
+                                                 A, B, C, D, E, G, H, lcp_offset, stiffness=0)
 # generate the testing data
 test_data_size = 1000
 # sample
@@ -81,7 +81,7 @@ learner = cartpole_class.cartpole_learner2(n_state, n_control, n_lam=n_lam,
                                           # A=A,
                                           # H=H,
                                           # C=C,
-                                          stiffness=0.1)
+                                          stiffness=0.001)
 
 
 # ================================   do some anlaysis for the prediction    ======================================
