@@ -81,7 +81,7 @@ learner = cartpole_class.cartpole_learner2(n_state, n_control, n_lam=n_lam,
                                           # A=A,
                                           # H=H,
                                           # C=C,
-                                          stiffness=0.1)
+                                          stiffness=0.001)
 
 
 # ================================   do some anlaysis for the prediction    ======================================
