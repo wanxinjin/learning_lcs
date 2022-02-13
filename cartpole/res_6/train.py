@@ -92,7 +92,7 @@ learner = cartpole_class.cartpole_learner2(n_state, n_control, n_lam=n_lam,
                                            # H=H,
                                            # C=C,
                                            # G=G,
-                                           stiffness=0.001)
+                                           stiffness=1.)
 # print(learner.theta)
 true_theta = vertcat(
     vec(A),
@@ -108,7 +108,7 @@ loss_trace = []
 theta_trace = []
 optimizier = opt.Adam()
 optimizier.learning_rate = 5e-2
-epsilon = np.logspace(2, -3, 5000)
+epsilon = np.logspace(3, -3, 5000)
 for k in range(5000):
     # mini batch dataset
     shuffle_index = np.random.permutation(train_data_size)[0:mini_batch_size]
