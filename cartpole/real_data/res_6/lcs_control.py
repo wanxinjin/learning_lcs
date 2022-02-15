@@ -214,7 +214,13 @@ class LCS_MPC:
         x_next = self.dyn_fn(xu_pair, lam_t).full().flatten()
         return x_next, lam_t
 
-    def mpc(self, init_state, horizon, mat_Q, mat_R, mat_QN):
+    def mpc(self, init_state, horizon, mat_Q, mat_R, mat_QN, init_guess=None):
+
+        if init_guess is not None:
+            prev_w = init_guess['w_opt']
+        else:
+            prev_w = 0.0
+
         # set initial condition
         init_state = casadi.DM(init_state).full().flatten().tolist()
         Q = DM(mat_Q)
@@ -288,7 +294,7 @@ class LCS_MPC:
         prob = {'f': J, 'x': casadi.vertcat(*w), 'g': casadi.vertcat(*g)}
         solver = casadi.nlpsol('solver', 'ipopt', prob, opts)
         # Solve the NLP
-        sol = solver(x0=w0, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
+        sol = solver(x0=prev_w, lbx=lbw, ubx=ubw, lbg=lbg, ubg=ubg)
         w_opt = sol['x']
         g = sol['g']
 
@@ -302,7 +308,9 @@ class LCS_MPC:
 
         opt_sol = {'state_traj_opt': x_traj.full(),
                    'control_traj_opt': u_traj.full(),
-                   'lam_traj_opt': lam_traj.full()}
+                   'lam_traj_opt': lam_traj.full(),
+                   'w_opt': w_opt,
+                   }
 
         return opt_sol
 
@@ -488,6 +496,171 @@ class LCS_MPC:
         opt_sol = {'state_traj_opt': x_traj.full(),
                    'control_traj_opt': u_traj.full(),
                    'lam_traj_opt': lam_traj.full()}
+
+        return opt_sol
+
+
+class LCS_MPC2:
+    def __init__(self, A, B, C, D, E, F, lcp_offset):
+        self.A = DM(A)
+        self.B = DM(B)
+        self.C = DM(C)
+        self.D = DM(D)
+        self.E = DM(E)
+        self.F = DM(F)
+        self.lcp_offset = DM(lcp_offset)
+
+        self.n_state = self.A.shape[0]
+        self.n_control = self.B.shape[1]
+        self.n_lam = self.C.shape[1]
+
+        # define the system variable
+        x = casadi.MX.sym('x', self.n_state)
+        u = casadi.MX.sym('u', self.n_control)
+        xu_pair = vertcat(x, u)
+        lam = casadi.MX.sym('lam', self.n_lam)
+
+        # dynamics
+        dyn = self.A @ x + self.B @ u + self.C @ lam
+        self.dyn_fn = Function('dyn_fn', [xu_pair, lam], [dyn])
+
+        # loss function
+        lcp_loss = dot(self.D @ x + self.E @ u + self.F @ lam + self.lcp_offset, lam)
+
+        # constraints
+        dis_cstr = self.D @ x + self.E @ u + self.F @ lam + self.lcp_offset
+        lam_cstr = lam
+        total_cstr = vertcat(dis_cstr, lam_cstr)
+        self.dis_cstr_fn = Function('dis_cstr_fn', [lam, xu_pair], [dis_cstr])
+
+        # establish the qp solver to solve for LCP
+        quadprog = {'x': lam, 'f': lcp_loss, 'g': total_cstr, 'p': xu_pair}
+        opts = {'printLevel': 'none', }
+        self.lcpSolver = qpsol('S', 'qpoases', quadprog, opts)
+
+    def forward(self, x_t, u_t):
+        xu_pair = vertcat(DM(x_t), DM(u_t))
+        sol = self.lcpSolver(p=xu_pair, lbg=0.)
+        lam_t = sol['x'].full().flatten()
+        x_next = self.dyn_fn(xu_pair, lam_t).full().flatten()
+        return x_next, lam_t
+
+    def oc_setup(self, mpc_horizon):
+
+        self.mpc_horizon = mpc_horizon
+
+        # set the cost function parameters
+        Q = MX.sym('Q', self.n_state, self.n_state)
+        R = MX.sym('R', self.n_control, self.n_control)
+        QN = MX.sym('QN', self.n_state, self.n_state)
+
+        # define the parameters
+        oc_parameters = vertcat(vec(Q), vec(R), vec(QN))
+
+        # Start with an empty NLP
+        w = []
+        w0 = []
+        lbw = []
+        ubw = []
+        J = 0
+        g = []
+        lbg = []
+        ubg = []
+
+        # "Lift" initial conditions
+        Xk = casadi.MX.sym('X0', self.n_state)
+        w += [Xk]
+        lbw += np.zeros(self.n_state).tolist()
+        ubw += np.zeros(self.n_state).tolist()
+        w0 += np.zeros(self.n_state).tolist()
+
+        # formulate the NLP
+        for k in range(self.mpc_horizon):
+            # New NLP variable for the control
+            Uk = casadi.MX.sym('U_' + str(k), self.n_control)
+            w += [Uk]
+            lbw += self.n_control * [-inf]
+            ubw += self.n_control * [inf]
+            w0 += self.n_control * [0.]
+
+            # new NLP variable for the complementarity variable
+            Lamk = casadi.MX.sym('lam' + str(k), self.n_lam)
+            w += [Lamk]
+            lbw += self.n_lam * [0.]
+            ubw += self.n_lam * [inf]
+            w0 += self.n_lam * [0.]
+
+            # Add complementarity equation
+            g += [self.D @ Xk + self.E @ Uk + self.F @ Lamk + self.lcp_offset]
+            lbg += self.n_lam * [0.]
+            ubg += self.n_lam * [inf]
+
+            g += [casadi.dot(self.D @ Xk + self.E @ Uk + self.F @ Lamk + self.lcp_offset, Lamk)]
+            lbg += [0.]
+            ubg += [0.]
+
+            # Integrate till the end of the interval
+            Xnext = self.A @ Xk + self.B @ Uk + self.C @ Lamk
+            Ck = dot(Xk, Q @ Xk) + dot(Uk, R @ Uk)
+            J = J + Ck
+
+            # New NLP variable for state at end of interval
+            Xk = casadi.MX.sym('X_' + str(k + 1), self.n_state)
+            w += [Xk]
+            lbw += self.n_state * [-inf]
+            ubw += self.n_state * [inf]
+            w0 += self.n_state * [0.]
+
+            # Add constraint for the dynamics
+            g += [Xnext - Xk]
+            lbg += self.n_state * [0.]
+            ubg += self.n_state * [0.]
+
+        # Add the final cost
+        J = J + dot(Xk, QN @ Xk)
+
+        # Create an NLP solver and solve
+        opts = {'ipopt.print_level': 0, 'ipopt.sb': 'yes', 'print_time': 0}
+        prob = {'f': J, 'x': casadi.vertcat(*w), 'g': casadi.vertcat(*g), 'p': oc_parameters}
+        self.solver = casadi.nlpsol('solver', 'ipopt', prob, opts)
+        self.lbw = DM(lbw)
+        self.ubw = DM(ubw)
+        self.lbg = DM(lbg)
+        self.ubg = DM(ubg)
+        self.w0 = DM(w0)
+
+
+    def mpc(self, init_state, mat_Q, mat_R, mat_QN, init_guess=None):
+
+        if init_guess is not None:
+            self.w0 = init_guess['w_opt']
+
+        # construct the parameter vector
+        oc_parameters = vertcat(vec(mat_Q), vec(mat_R), vec(mat_QN))
+
+
+        self.lbw[0:self.n_state] = DM(init_state)
+        self.ubw[0:self.n_state] = DM(init_state)
+        self.w0[0:self.n_state] = DM(init_state)
+
+        # Solve the NLP
+        sol = self.solver(x0=self.w0, lbx=self.lbw, ubx=self.ubw, lbg=self.lbg, ubg=self.ubg, p=oc_parameters)
+        w_opt = sol['x']
+        g = sol['g']
+
+        # extract the optimal control and state
+        sol_traj = w_opt[0:self.mpc_horizon * (self.n_state + self.n_control + self.n_lam)].reshape(
+            (self.n_state + self.n_control + self.n_lam, -1))
+        x_traj = casadi.horzcat(sol_traj[0:self.n_state, :],
+                                w_opt[self.mpc_horizon * (self.n_state + self.n_control + self.n_lam):]).T
+        u_traj = sol_traj[self.n_state:self.n_state + self.n_control, :].T
+        lam_traj = sol_traj[self.n_state + self.n_control:, :].T
+
+        opt_sol = {'state_traj_opt': x_traj.full(),
+                   'control_traj_opt': u_traj.full(),
+                   'lam_traj_opt': lam_traj.full(),
+                   'w_opt': w_opt,
+                   }
 
         return opt_sol
 
