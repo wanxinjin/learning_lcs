@@ -74,6 +74,7 @@ class cartpole_learner:
         self.D_fn = Function('D_fn', [self.theta], [self.D])
         self.E_fn = Function('E_fn', [self.theta], [self.E])
         self.G_fn = Function('G_fn', [self.theta], [self.G])
+        self.H_fn = Function('H_fn', [self.theta], [self.H])
         self.A_fn = Function('A_fn', [self.theta], [self.A])
         self.B_fn = Function('B_fn', [self.theta], [self.B])
         self.C_fn = Function('C_fn', [self.theta], [self.C])
@@ -299,7 +300,7 @@ class cartpole_learner2:
 
         # total loss
         dyn_loss = dot(self.true_lam - self.lam, self.true_lam - self.lam)
-        loss = dyn_loss+ lcp_loss / epsilon
+        loss = dyn_loss + lcp_loss / epsilon
 
         lam_phi = vertcat(self.lam, self.phi)
         data_theta = vertcat(data, self.theta)
@@ -362,7 +363,6 @@ class cartpole_learner2:
         lcp_Solver = qpsol('lcp_solver', 'qpoases', quadprog, opts)
         self.lcp_fn = Function('dist_fn', [self.x, self.u, self.lam, self.theta], [self.dist, dot(self.dist, self.lam)])
         self.lcp_dist_fn = Function('dist_fn', [self.x, self.u, self.lam, self.theta], [self.dist])
-
 
         # compute the lam_batch
         sol_batch = lcp_Solver(lbx=0., lbg=0., p=xu_theta_batch.T)

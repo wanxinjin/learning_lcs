@@ -29,7 +29,6 @@ train_lam_batch = train_data['train_lam']
 
 train_data_size = train_x_batch.shape[0]
 
-
 train_mode_list, train_mode_frequency_list = cartpole_class.statiModes(train_lam_batch)
 print('train_data size:', train_data_size)
 print('number of modes in the training data:', train_mode_frequency_list.size)
@@ -68,9 +67,26 @@ pred_x, pred_y = [], []
 sc2 = ax.scatter(pred_x, pred_y, s=30, marker="+", cmap='paried')
 plt.draw()
 
+# ==============================   create the FORCE learner object    ========================================
+# ！！！！！！！！！！！！！！！！ make sure matching with line 60-63 in the train.py
+force_learner = cartpole_class.cartpole_learner2(n_state, n_control, n_lam=n_lam,
+                                                 stiffness=1.)
+force_learned_res = np.load('../res_2/learned.npy', allow_pickle=True).item()
+force_learned_theta = force_learned_res['theta_trace'][-1]
+D = force_learner.D_fn(force_learned_theta)
+E = force_learner.E_fn(force_learned_theta)
+G = force_learner.G_fn(force_learned_theta)
+H = force_learner.H_fn(force_learned_theta)
+lcp_offset = force_learner.lcp_offset_fn(force_learned_theta)
+
 # ==============================   create the learner object    ========================================
 learner = cartpole_class.cartpole_learner(n_state, n_control, n_lam=n_lam,
-                                           stiffness=0.01)
+                                          D=D,
+                                          E=E,
+                                          G=G,
+                                          H=H,
+                                          lcp_offset=lcp_offset,
+                                          stiffness=1.)
 # ================================   beginning the training process    ======================================
 # doing learning process
 curr_theta = 0.5 * np.random.rand(learner.n_theta)
@@ -79,7 +95,7 @@ mini_batch_size = train_data_size
 loss_trace = []
 theta_trace = []
 optimizier = opt.Adam()
-optimizier.learning_rate = 1e-4
+optimizier.learning_rate = 1e-3
 epsilon = np.logspace(5, -3, 10000)
 for k in range(10000):
     # mini batch dataset
@@ -166,6 +182,15 @@ print(pred_error_per_mode_list)
 pred_x = train_x_batch[:, plot_x_indx]
 pred_y = pred_x_next_batch[:, plot_y_indx]
 
+learned_A = learner.A_fn(curr_theta).full()
+learned_B = learner.B_fn(curr_theta).full()
+learned_C = learner.C_fn(curr_theta).full()
+learned_D = learner.D_fn(curr_theta).full()
+learned_E = learner.E_fn(curr_theta).full()
+learned_G = learner.G_fn(curr_theta).full()
+learned_H = learner.H_fn(curr_theta).full()
+learned_lcp_offset = learner.lcp_offset_fn(curr_theta).full()
+
 np.save('learned', {
     'theta_trace': theta_trace,
     'loss_trace': loss_trace,
@@ -185,4 +210,13 @@ np.save('learned', {
     'relative_error': relative_error,
     'plot_x_index': plot_x_indx,
     'plot_y_index': plot_x_indx,
+    'learned_A': learned_A,
+    'learned_B': learned_B,
+    'learned_C': learned_C,
+    'learned_D': learned_D,
+    'learned_E': learned_E,
+    'learned_G': learned_G,
+    'learned_H': learned_H,
+    'learned_lcp_offset': learned_lcp_offset,
+
 })

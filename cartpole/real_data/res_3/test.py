@@ -14,13 +14,17 @@ def print(*args):
 # color list
 color_list = np.linspace(0, 1, 10)
 
-
-
-
-
 # ==============================# re-show the training plot   ==================================
 learned_res = np.load('learned.npy', allow_pickle=True).item()
-learned_theta = learned_res['theta_trace'][-1]
+learned_A = learned_res['learned_A']
+learned_B = learned_res['learned_B']
+learned_C = learned_res['learned_C']
+learned_D = learned_res['learned_D']
+learned_E = learned_res['learned_E']
+learned_G = learned_res['learned_G']
+learned_H = learned_res['learned_H']
+learned_lcp_offset = learned_res['learned_lcp_offset']
+
 print('####################training results analysis#########################')
 print('mode count for training data:', learned_res['train_mode_count'])
 print('mode list for training data:\n', learned_res['train_mode_list'])
@@ -46,7 +50,7 @@ ax.scatter(train_x, learned_y, c=color_list[learned_mode_indices], s=40, marker=
 plt.show()
 
 # ==============================   load the real testing data   ==================================
-test_data = np.load('data/test_data.npy', allow_pickle=True).item()
+test_data = np.load('../data/test_data.npy', allow_pickle=True).item()
 n_state = test_data['n_state']
 n_control = test_data['n_control']
 n_lam = test_data['n_lam']
@@ -65,9 +69,19 @@ print('mode frequency in the testing data: ', test_mode_frequency_list)
 test_mode_list, test_mode_indices = cartpole_class.plotModes(test_lam_batch)
 
 # ==============================   create the learner object    ========================================
-# ！！！！！！！！！！！！！！！！ make sure matching with line 60-63 in the train.py
 learner = cartpole_class.cartpole_learner(n_state, n_control, n_lam=n_lam,
-                                           stiffness=0.1)
+                                          stiffness=1.)
+
+learned_theta = vertcat(vec(learned_A),
+                        vec(learned_B),
+                        vec(learned_C),
+                        vec(learned_D),
+                        vec(learned_E),
+                        vec(learned_G),
+                        vec(learned_H),
+                        vec(learned_lcp_offset)
+                        ).full().flatten()
+
 
 
 # ================================   do some anlaysis for the prediction    ======================================
@@ -132,56 +146,36 @@ ax.scatter(test_x, pred_y, c=color_list[pred_mode_indices], s=40, marker="^")
 # ==================== print some key results  =======================
 
 if True:
-    ini_theta=learned_res['theta_trace'][0]
+    ini_theta = learned_res['theta_trace'][0]
     print('------------------------------------------------')
     print('A')
-    print('initial:\n', learner.A_fn(ini_theta))
-    print('learned:\n',learner.A_fn(learned_theta))
+    print('learned:\n', learned_A)
     print('------------------------------------------------')
     print('B')
-    print('initial:\n', learner.B_fn(ini_theta))
-    print('learned:\n',learner.B_fn(learned_theta))
+    print('learned:\n', learned_B)
     print('------------------------------------------------')
     print('C')
-    print('initial:\n', learner.C_fn(ini_theta))
-    print('learned: \n', learner.C_fn(learned_theta))
+    print('learned:\n', learned_C)
     print('------------------------------------------------')
     print('D')
-    print('true')
-    print('initial:')
-    print(learner.D_fn(ini_theta))
-    print('learned')
-    print(learner.D_fn(learned_theta))
+    print('learned:\n', learned_D)
     print('------------------------------------------------')
     print('E')
-    print('true')
-    print('initial:')
-    print(learner.E_fn(ini_theta))
-    print('learned')
-    print(learner.E_fn(learned_theta))
+    print('learned:\n', learned_E)
     print('------------------------------------------------')
-    print('F')
-    print('true')
-    print('initial:')
-    print(learner.F_fn(ini_theta))
-    print('learned')
-    print(learner.F_fn(learned_theta))
+    print('G')
+    print('learned:\n', learned_G)
+    print('------------------------------------------------')
+    print('H')
+    print('learned:\n', learned_H)
     print('------------------------------------------------')
     print('lcp_offset')
-    print('initial:')
-    print(learner.lcp_offset_fn(ini_theta))
-    print('learned')
-    print(learner.lcp_offset_fn(learned_theta))
-
-
-
-
+    print('learned\n',learned_lcp_offset)
 
 print('------------------------------------------------')
 error_x_next_batch = pred_x_next_batch - test_x_next_batch
 relative_error = (la.norm(error_x_next_batch, axis=1) / la.norm(test_x_next_batch, axis=1)).mean()
 print('relative prediction error:', relative_error)
-
 
 print('------------------------------------------------')
 print('pred_x/true_x')
@@ -199,8 +193,5 @@ print('pred_lam mode')
 print(np.where(pred_lam_opt_batch[0:10] < 1e-5, 0, 1))
 print('true lam mode')
 print(np.where(test_lam_batch[0:10] < 1e-5, 0, 1))
-
-
-
 
 plt.show()
