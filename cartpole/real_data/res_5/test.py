@@ -175,6 +175,7 @@ if True:
 
 
 
+
 print('------------------------------------------------')
 error_x_next_batch = pred_x_next_batch - test_x_next_batch
 relative_error = (la.norm(error_x_next_batch, axis=1) / la.norm(test_x_next_batch, axis=1)).mean()
@@ -202,3 +203,18 @@ print(np.where(test_lam_batch[0:10] < 1e-5, 0, 1))
 
 
 plt.show()
+
+
+
+# safe the learned matrix
+np.save('learned_lcs',
+        {
+            'A': learner.A_fn(learned_theta).full(),
+            'B': learner.B_fn(learned_theta).full(),
+            'C': learner.C_fn(learned_theta).full(),
+            'D': learner.D_fn(learned_theta).full(),
+            'E': learner.E_fn(learned_theta).full(),
+            'F': learner.F_fn(learned_theta).full(),
+            'lcp_offset': learner.lcp_offset_fn(learned_theta).full(),
+        }
+        )
