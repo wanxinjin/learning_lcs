@@ -15,6 +15,11 @@ E = learned_lcs['E']
 F = learned_lcs['F']
 lcp_offset = learned_lcs['lcp_offset']
 
+
+print(lcp_offset)
+print(F)
+
+
 mpc = lcs_control.LCS_MPC2(A=A,
                            B=B,
                            C=C,
@@ -60,36 +65,36 @@ true_mpc_control_traj = np.array(true_mpc_control_traj)
 
 plt.figure(figsize=(15, 3))
 plt.subplot(1, 5, 1)
-plt.plot(true_mpc_state_traj[:, 0], label='true_mpc')
+plt.plot(true_mpc_state_traj[:, 0])
 
-plt.legend()
+# plt.legend()
 plt.ylabel('x1')
 plt.xlabel('sim time')
 
 plt.subplot(1, 5, 2)
 plt.plot(true_mpc_state_traj[:, 1])
 
-plt.legend()
+# plt.legend()
 plt.ylabel('x2')
 plt.xlabel('sim time')
 
 plt.subplot(1, 5, 3)
 plt.plot(true_mpc_state_traj[:, 2])
 
-plt.legend()
+# plt.legend()
 plt.ylabel('x3')
 plt.xlabel('sim time')
 
 plt.subplot(1, 5, 4)
 plt.plot(true_mpc_state_traj[:, 3])
 
-plt.legend()
+# plt.legend()
 plt.ylabel('x4')
 plt.xlabel('sim time')
 
 plt.subplot(1, 5, 5)
 plt.plot(true_mpc_control_traj)
-plt.legend()
+# plt.legend()
 plt.ylabel('u')
 plt.xlabel('sim time')
 
@@ -100,13 +105,13 @@ true_mpc_lam_traj = np.array(true_mpc_lam_traj)
 plt.figure(figsize=(6, 3))
 plt.subplot(1, 2, 1)
 plt.plot(true_mpc_lam_traj[:, 0])
-plt.legend()
+# plt.legend()
 plt.ylabel('lam_1')
 plt.xlabel('sim time')
 
 plt.subplot(1, 2, 2)
 plt.plot(true_mpc_lam_traj[:, 1])
-plt.legend()
+# plt.legend()
 plt.ylabel('lam_2')
 plt.xlabel('sim time')
 

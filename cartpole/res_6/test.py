@@ -226,4 +226,19 @@ print(np.where(test_lam_opt_batch[0:10] < 1e-5, 0, 1))
 # print(pred_dist[0:10] * pred_lam_opt_batch[0:10])
 
 
+
+
 plt.show()
+
+
+
+np.save('learned_LCS_alp',
+        {
+            'A':learner.A_fn(learned_theta).full(),
+            'B':learner.B_fn(learned_theta).full(),
+            'D':learner.C_fn(learned_theta).full(),
+            'E':learner.D_fn(learned_theta).full(),
+            'H':learner.E_fn(learned_theta).full(),
+            'F':learner.F_fn(learned_theta).full(),
+            'c':learner.lcp_offset_fn(learned_theta).full(),
+        })
