@@ -31,4 +31,11 @@ print('------------------------------------------------')
 print('lcp_offset')
 print(lcp_offset)
 
-
+np.save('wanxin_mats.npy', {'A': A,
+                            'B': B,
+                            'C': C,
+                            'D': D,
+                            'E': E,
+                            'F': F,
+                            'lcp_offset': lcp_offset
+                            })

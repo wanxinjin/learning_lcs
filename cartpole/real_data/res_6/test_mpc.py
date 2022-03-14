@@ -29,15 +29,35 @@ mpc = lcs_control.LCS_MPC2(A=A,
                            lcp_offset=lcp_offset
                            )
 mpc.oc_setup(mpc_horizon=5)
+#
+# # load the system
+# learned_lcs = np.load('alp_lcs.npy', allow_pickle=True).item()
+# A = learned_lcs['A']
+# B = learned_lcs['B']
+# C = learned_lcs['C']
+# D = learned_lcs['D']
+# E = learned_lcs['E']
+# F = learned_lcs['F']
+# lcp_offset = learned_lcs['lcp_offset']
+#
+#
+# print(lcp_offset)
+# print(F)
+#
 
 
-Q = np.array([[10, 0, 0, 0], [0, 10, 0, 0], [0, 0, .1, 0], [0, 0, 0, .1]])
-R = 0.05
+
+
+
+# Q = np.array([[10, 0, 0, 0], [0, 10, 0, 0], [0, 0, .1, 0], [0, 0, 0, .1]])
+Q = np.array([[10, 0, 0, 0], [0, 3, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
+# R = 0.05
+R = 1
 QN = scipy.linalg.solve_discrete_are(A, B, Q, R)
 
 sim_horizon = 800
 # init_state = 0.3 * np.random.randn(n_state)
-init_state = np.array([0.1, 0.3, 0, 0])
+init_state = np.array([0.1, -0.3, 0, 0])
 true_mpc_state_traj = [init_state]
 true_mpc_control_traj = []
 true_mpc_lam_traj = []
