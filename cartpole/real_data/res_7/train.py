@@ -89,11 +89,11 @@ true_theta = vertcat(vec(alp_A),
                      ).full().flatten()
 
 # ==============================   create the learner object    ========================================
-learner = cartpole_class.cartpole_learner(n_state, n_control, n_lam=5, stiffness=0.00)
+learner = cartpole_class.cartpole_learner(n_state, n_control, n_lam=n_lam, stiffness=0.00)
 # ================================   beginning the training process    ======================================
 # doing learning process
 # curr_theta = 0.5 * np.random.rand(learner.n_theta)
-curr_theta = true_theta + 0.0 * np.random.randn(learner.n)
+curr_theta = true_theta + 0.0 * np.random.randn(learner.n_theta)
 mini_batch_size = train_data_size
 loss_trace = []
 theta_trace = []
