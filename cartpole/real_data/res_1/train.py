@@ -17,7 +17,7 @@ def print(*args):
 color_list = np.linspace(0, 1, 10)
 
 # ==============================   load the real training data   ==================================
-train_data = np.load('data/train_data.npy', allow_pickle=True).item()
+train_data = np.load('data/train_data_2.npy', allow_pickle=True).item()
 n_state = train_data['n_state']
 n_control = train_data['n_control']
 n_lam = train_data['n_lam']
