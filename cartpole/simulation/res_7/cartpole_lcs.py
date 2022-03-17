@@ -31,6 +31,21 @@ C = [[0, 0], [0, 0], [(-1 / mc) + (len_p / (mc * len_com)), (1 / mc) - (len_p / 
      [(-1 / (mc * len_com)) + (len_p * (mc + mp)) / (mc * mp * len_com * len_com),
       -((-1 / (mc * len_com)) + (len_p * (mc + mp)) / (mc * mp * len_com * len_com))]]
 
+# C = [[0, 0], [0, 0], [0, 0],
+#      [(-1 / (mc * len_com)) + (len_p * (mc + mp)) / (mc * mp * len_com * len_com),
+#       -((-1 / (mc * len_com)) + (len_p * (mc + mp)) / (mc * mp * len_com * len_com))]]
+
+
+# # C=np.asarray([[0,0],
+# #                [0, 0],
+# #                [1, 0],
+# #                [0, 1]])
+# #
+# C = [[0, 0], [0, 0], [(-1 / mc) + (len_p / (mc * len_com))+0.1, (1 / mc) - (len_p / (mc * len_com))],
+#      [(-1 / (mc * len_com)) + (len_p * (mc + mp)) / (mc * mp * len_com * len_com),
+#       -((-1 / (mc * len_com)) + (len_p * (mc + mp)) / (mc * mp * len_com * len_com))]]
+
+
 
 
 C = np.asarray(C)
@@ -73,12 +88,6 @@ print('lcp_offset:')
 print(lcp_offset)
 
 
-print(A)
-input()
-
-
-
-
 lcs_mats = {
     'n_state': n_state,
     'n_control': n_control,
@@ -94,5 +103,4 @@ lcs_mats = {
     'lcp_offset': lcp_offset,
     'min_sig': min_sig}
 
-np.save('alp_lcs', lcs_mats)
-
+np.save('cartpole_lcs', lcs_mats)

@@ -74,19 +74,16 @@ class cartpole_learner:
         self.D_fn = Function('D_fn', [self.theta], [self.D])
         self.E_fn = Function('E_fn', [self.theta], [self.E])
         self.G_fn = Function('G_fn', [self.theta], [self.G])
-        self.H_fn = Function('H_fn', [self.theta], [self.H])
         self.A_fn = Function('A_fn', [self.theta], [self.A])
         self.B_fn = Function('B_fn', [self.theta], [self.B])
         self.C_fn = Function('C_fn', [self.theta], [self.C])
         self.lcp_offset_fn = Function('lcp_offset_fn', [self.theta], [self.lcp_offset])
-        # self.dyn_offset_fn = Function('dyn_offset_fn', [self.theta], [self.dyn_offset])
 
     def differetiable(self, gamma=1e-3, epsilon=1e5):
 
         # define the dynamics loss
         self.x_next = SX.sym('x_next', self.n_state)
         data = vertcat(self.x, self.u, self.x_next)
-        # self.dyn = self.A @ self.x + self.B @ self.u + self.C @ self.lam + self.dyn_offset
         self.dyn = self.A @ self.x + self.B @ self.u + self.C @ self.lam
         dyn_loss = dot(self.dyn - self.x_next, self.dyn - self.x_next)
 
@@ -136,7 +133,6 @@ class cartpole_learner:
         # prepare the data
         batch_size = x_batch.shape[0]
         data_batch = np.hstack((x_batch, u_batch, x_next_batch))
-
         theta_val_batch = np.tile(theta_val, (batch_size, 1))
         data_theta_batch = np.hstack((data_batch, theta_val_batch))
 
@@ -211,7 +207,7 @@ class cartpole_learner:
         return x_next_batch, lam_opt_batch
 
 
-class cartpole_learner_halfA:
+class cartpole_learner2:
     def __init__(self, n_state, n_control, n_lam,
                  A=None, B=None, C=None, D=None, E=None, G=None, H=None, lcp_offset=None,
                  stiffness=0.):
@@ -226,10 +222,8 @@ class cartpole_learner_halfA:
         self.theta = []
 
         if A is None:
-            A_vel = SX.sym('A', self.n_state / 2, self.n_state)
-            A_pos = DM([[1, 0, 0.01, 0], [0, 1, 0, 0.01]])
-            self.A = vertcat(A_pos, A_vel)
-            self.theta += [vec(A_vel)]
+            self.A = SX.sym('A', self.n_state, self.n_state)
+            self.theta += [vec(self.A)]
         else:
             self.A = DM(A)
 
@@ -283,19 +277,16 @@ class cartpole_learner_halfA:
         self.D_fn = Function('D_fn', [self.theta], [self.D])
         self.E_fn = Function('E_fn', [self.theta], [self.E])
         self.G_fn = Function('G_fn', [self.theta], [self.G])
-        self.H_fn = Function('H_fn', [self.theta], [self.H])
         self.A_fn = Function('A_fn', [self.theta], [self.A])
         self.B_fn = Function('B_fn', [self.theta], [self.B])
         self.C_fn = Function('C_fn', [self.theta], [self.C])
         self.lcp_offset_fn = Function('lcp_offset_fn', [self.theta], [self.lcp_offset])
-        # self.dyn_offset_fn = Function('dyn_offset_fn', [self.theta], [self.dyn_offset])
 
-    def differetiable(self, gamma=1e-3, epsilon=1e5):
+    def differetiable(self, gamma=1e-3, epsilon=1e3):
 
         # define the dynamics loss
         self.x_next = SX.sym('x_next', self.n_state)
         data = vertcat(self.x, self.u, self.x_next)
-        # self.dyn = self.A @ self.x + self.B @ self.u + self.C @ self.lam + self.dyn_offset
         self.dyn = self.A @ self.x + self.B @ self.u + self.C @ self.lam
         dyn_loss = dot(self.dyn - self.x_next, self.dyn - self.x_next)
 
@@ -345,7 +336,6 @@ class cartpole_learner_halfA:
         # prepare the data
         batch_size = x_batch.shape[0]
         data_batch = np.hstack((x_batch, u_batch, x_next_batch))
-
         theta_val_batch = np.tile(theta_val, (batch_size, 1))
         data_theta_batch = np.hstack((data_batch, theta_val_batch))
 
@@ -418,6 +408,8 @@ class cartpole_learner_halfA:
         x_next_batch = dyn_fn(x_batch.T, u_batch.T, lam_opt_batch.T, theta_val_batch.T).full().T
 
         return x_next_batch, lam_opt_batch
+
+
 
 
 class QP_learner:

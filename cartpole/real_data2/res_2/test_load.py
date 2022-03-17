@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.io import savemat
 
 learned_lcs = np.load('learned_lcs.npy', allow_pickle=True).item()
 A = learned_lcs['A']
@@ -12,6 +13,7 @@ lcp_offset = learned_lcs['lcp_offset']
 print('------------------------------------------------')
 print('A')
 print(A)
+print(np.abs(np.linalg.eigvals(A)))
 print('------------------------------------------------')
 print('B')
 print(B)
@@ -31,9 +33,6 @@ print('------------------------------------------------')
 print('lcp_offset')
 print(lcp_offset)
 
-
-
-
 np.save('wanxin_mats.npy', {'A': A,
                             'B': B,
                             'C': C,
@@ -42,3 +41,14 @@ np.save('wanxin_mats.npy', {'A': A,
                             'F': F,
                             'lcp_offset': lcp_offset
                             })
+
+
+
+savemat.save('wanxin_mats.mat', {'A': A,
+                                 'B': B,
+                                 'C': C,
+                                 'D': D,
+                                 'E': E,
+                                 'F': F,
+                                 'lcp_offset': lcp_offset
+                                 })

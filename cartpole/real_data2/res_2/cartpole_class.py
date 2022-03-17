@@ -226,7 +226,7 @@ class cartpole_learner_halfA:
         self.theta = []
 
         if A is None:
-            A_vel = SX.sym('A', self.n_state / 2, self.n_state)
+            A_vel = SX.sym('A_vel', int(self.n_state / 2), self.n_state)
             A_pos = DM([[1, 0, 0.01, 0], [0, 1, 0, 0.01]])
             self.A = vertcat(A_pos, A_vel)
             self.theta += [vec(A_vel)]
@@ -234,8 +234,10 @@ class cartpole_learner_halfA:
             self.A = DM(A)
 
         if B is None:
-            self.B = SX.sym('B', self.n_state, self.n_control)
-            self.theta += [vec(self.B)]
+            B_vel = SX.sym('B_vel', int(self.n_state / 2))
+            B_pos = DM([0, 0])
+            self.B = vertcat(B_pos, B_vel)
+            self.theta += [vec(B_vel)]
         else:
             self.B = DM(B)
 
@@ -258,8 +260,9 @@ class cartpole_learner_halfA:
             self.E = DM(E)
 
         if G is None:
-            self.G = SX.sym('G', self.n_lam, self.n_lam)
-            self.theta += [vec(self.G)]
+            diag_g = SX.sym('diag_g', self.n_lam)
+            self.G = diag(diag_g)
+            self.theta += [vec(diag_g)]
         else:
             self.G = DM(G)
 

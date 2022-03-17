@@ -1,6 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.io as sio
+from scipy.signal import savgol_filter
+
+win_len=11
+order=3
+
 
 # ================================= left impact
 train_x_batch = []
@@ -15,6 +20,19 @@ position_cart = load['position_cart'].flatten()
 position_pole = load['position_pole'].flatten()
 velocity_cart = load['CartVel'].flatten()
 velocity_pole = load['PoleVel'].flatten()
+
+# position_cart = savgol_filter(position_cart, win_len, order)
+# position_pole = savgol_filter(position_pole, win_len, order)
+velocity_cart = savgol_filter(velocity_cart, win_len, order)
+velocity_pole = savgol_filter(velocity_pole, win_len, order)
+control=savgol_filter(control, win_len, order)
+
+
+
+
+
+
+
 state = np.vstack((position_cart, position_pole, velocity_cart, velocity_pole)).T
 # do the cut
 start = 400
@@ -36,6 +54,13 @@ position_cart = load['position_cart'].flatten()
 position_pole = load['position_pole'].flatten()
 velocity_cart = load['CartVel'].flatten()
 velocity_pole = load['PoleVel'].flatten()
+
+
+velocity_cart = savgol_filter(velocity_cart, win_len, order)
+velocity_pole = savgol_filter(velocity_pole, win_len, order)
+control=savgol_filter(control, win_len, order)
+
+
 state = np.vstack((position_cart, position_pole, velocity_cart, velocity_pole)).T
 # do the cut
 start = 400
@@ -57,6 +82,15 @@ position_cart = load['position_cart'].flatten()
 position_pole = load['position_pole'].flatten()
 velocity_cart = load['CartVel'].flatten()
 velocity_pole = load['PoleVel'].flatten()
+
+
+
+velocity_cart = savgol_filter(velocity_cart, win_len, order)
+velocity_pole = savgol_filter(velocity_pole, win_len, order)
+control=savgol_filter(control, win_len, order)
+
+
+
 state = np.vstack((position_cart, position_pole, velocity_cart, velocity_pole)).T
 # do the cut
 start = 400
@@ -78,6 +112,14 @@ position_cart = load['position_cart'].flatten()
 position_pole = load['position_pole'].flatten()
 velocity_cart = load['CartVel'].flatten()
 velocity_pole = load['PoleVel'].flatten()
+
+
+velocity_cart = savgol_filter(velocity_cart, win_len, order)
+velocity_pole = savgol_filter(velocity_pole, win_len, order)
+control=savgol_filter(control, win_len, order)
+
+
+
 state = np.vstack((position_cart, position_pole, velocity_cart, velocity_pole)).T
 # do the cut
 start = 400
@@ -89,6 +131,12 @@ control = control[start: end]
 train_x_batch += [state[0:-1]]
 train_u_batch += [control]
 train_x_next_batch += [state[1:]]
+
+
+
+
+
+
 
 # ================================= right impact
 
@@ -102,6 +150,14 @@ position_cart = load['position_cart'].flatten()
 position_pole = load['position_pole'].flatten()
 velocity_cart = load['CartVel'].flatten()
 velocity_pole = load['PoleVel'].flatten()
+
+
+velocity_cart = savgol_filter(velocity_cart, win_len, order)
+velocity_pole = savgol_filter(velocity_pole, win_len, order)
+control=savgol_filter(control, win_len, order)
+
+
+
 state = np.vstack((position_cart, position_pole, velocity_cart, velocity_pole)).T
 # do the cut
 start = 400
@@ -118,11 +174,19 @@ train_x_next_batch += [state[1:]]
 load = sio.loadmat('trial7.mat')
 input = load['input'].flatten()
 friction_force = load['Friction_force'].flatten()
+# friction_force=0
 control = input + friction_force
 position_cart = load['position_cart'].flatten()
 position_pole = load['position_pole'].flatten()
 velocity_cart = load['CartVel'].flatten()
 velocity_pole = load['PoleVel'].flatten()
+
+
+velocity_cart = savgol_filter(velocity_cart, win_len, order)
+velocity_pole = savgol_filter(velocity_pole, win_len, order)
+control=savgol_filter(control, win_len, order)
+
+
 state = np.vstack((position_cart, position_pole, velocity_cart, velocity_pole)).T
 # do the cut
 start = 400
@@ -139,11 +203,20 @@ train_x_next_batch += [state[1:]]
 load = sio.loadmat('trial8.mat')
 input = load['input'].flatten()
 friction_force = load['Friction_force'].flatten()
+# friction_force=0
 control = input + friction_force
 position_cart = load['position_cart'].flatten()
 position_pole = load['position_pole'].flatten()
 velocity_cart = load['CartVel'].flatten()
 velocity_pole = load['PoleVel'].flatten()
+
+
+velocity_cart = savgol_filter(velocity_cart, win_len, order)
+velocity_pole = savgol_filter(velocity_pole, win_len, order)
+control=savgol_filter(control, win_len, order)
+
+
+
 state = np.vstack((position_cart, position_pole, velocity_cart, velocity_pole)).T
 # do the cut
 start = 400
@@ -160,11 +233,19 @@ train_x_next_batch += [state[1:]]
 load = sio.loadmat('trial9.mat')
 input = load['input'].flatten()
 friction_force = load['Friction_force'].flatten()
+# friction_force=0
 control = input + friction_force
 position_cart = load['position_cart'].flatten()
 position_pole = load['position_pole'].flatten()
 velocity_cart = load['CartVel'].flatten()
 velocity_pole = load['PoleVel'].flatten()
+
+
+velocity_cart = savgol_filter(velocity_cart, win_len, order)
+velocity_pole = savgol_filter(velocity_pole, win_len, order)
+control=savgol_filter(control, win_len, order)
+
+
 state = np.vstack((position_cart, position_pole, velocity_cart, velocity_pole)).T
 # do the cut
 start = 400
@@ -182,9 +263,24 @@ train_x_batch = np.vstack(train_x_batch)
 train_x_next_batch = np.vstack(train_x_next_batch)
 train_u_batch = np.hstack(train_u_batch)
 
-print(train_u_batch.shape)
-print(train_x_batch.shape)
-print(train_x_next_batch.shape)
+# print(train_u_batch.shape)
+# print(train_x_batch.shape)
+# print(train_x_next_batch.shape)
+#
+
+
+# # plt.plot(train_x_batch[:,0])
+# # plt.plot(train_x_batch[:,1])
+# plt.plot(train_x_batch[:,2])
+# plt.plot(train_x_batch[:,3])
+# # plt.show()
+#
+# plt.figure()
+# plt.plot(train_u_batch)
+# plt.show()
+
+
+
 
 # save
 n_state = 4
@@ -198,13 +294,3 @@ np.save('train_data_2.npy', {'train_x': train_x_batch,
                            'n_lam': n_lam
                              })
 
-#
-# plt.plot(train_x_batch[:,0])
-# plt.plot(train_x_batch[:,1])
-# plt.plot(train_x_batch[:,2])
-# plt.plot(train_x_batch[:,3])
-# plt.show()
-#
-# plt.figure()
-# plt.plot(train_u_batch)
-# plt.show()

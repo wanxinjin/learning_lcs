@@ -31,10 +31,7 @@ C = [[0, 0], [0, 0], [(-1 / mc) + (len_p / (mc * len_com)), (1 / mc) - (len_p / 
      [(-1 / (mc * len_com)) + (len_p * (mc + mp)) / (mc * mp * len_com * len_com),
       -((-1 / (mc * len_com)) + (len_p * (mc + mp)) / (mc * mp * len_com * len_com))]]
 
-
-
 C = np.asarray(C)
-
 
 D = [[-1, len_p, 0, 0], [1, -len_p, 0, 0]]
 D = np.asarray(D)
@@ -52,32 +49,15 @@ D = D
 E = E
 F = F
 H = np.zeros((n_lam, n_lam))
-G=np.sqrt(F)
+G = np.sqrt(F)
 
 # form the lcs system
 min_sig = min(np.linalg.eigvals(F + F.T))
 
-
-
-print('C')
-print(C)
-
-
-print('D:')
-print(D)
-
-print('E')
-print(E)
-
-print('lcp_offset:')
-print(lcp_offset)
-
-
 print(A)
-input()
-
-
-
+print(np.abs(np.linalg.eigvals(A)))
+print(B)
+print(C)
 
 lcs_mats = {
     'n_state': n_state,
@@ -89,10 +69,10 @@ lcs_mats = {
     'D': D,
     'E': E,
     'G': G,
+    'diag_g': np.array([0.1, 0.1]),
     'H': H,
     'F': F,
     'lcp_offset': lcp_offset,
     'min_sig': min_sig}
 
 np.save('alp_lcs', lcs_mats)
-
