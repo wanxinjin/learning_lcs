@@ -26,6 +26,7 @@ train_x_batch = train_data['train_x']
 train_u_batch = train_data['train_u'].reshape((-1, 1))
 train_x_next_batch = train_data['train_x_next']
 
+
 train_data_size = train_x_batch.shape[0]
 
 # train_mode_list, train_mode_frequency_list = cartpole_class.statiModes(train_lam_batch)
